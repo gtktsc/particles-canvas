@@ -6,12 +6,15 @@ import {
 import { Vector3 } from "@/classes/Vector3";
 
 let particleIdCounter = 0;
+export type Charge = -1 | 0 | 1; // negative, neutral, positive
 
 export class Particle {
   _id: number;
   position: Vector3;
   velocity: Vector3;
   radius: number;
+  charge: Charge;
+
   collided = false;
 
   constructor(worldWidth: number, worldHeight: number, worldZ: number) {
@@ -24,6 +27,9 @@ export class Particle {
 
     const { x: vx, y: vy, z: vz } = getInitialVelocity();
     this.velocity = new Vector3(vx, vy, vz);
+
+    const rand = Math.random();
+    this.charge = rand < 0.33 ? -1 : rand < 0.66 ? 0 : 1;
   }
 
   applyForce(force: Vector3) {
@@ -114,6 +120,13 @@ export class Particle {
       ? overrideColor
       : baseColor.replace(/1\)$/, `${alpha})`);
 
-    return { px, py, scale, radius, color };
+    const chargeColor =
+      this.charge === -1
+        ? `rgba(0, 0, 255, ${alpha})`
+        : this.charge === 1
+        ? `rgba(255, 0, 0, ${alpha})`
+        : baseColor.replace(/1\)$/, `${alpha})`);
+
+    return { px, py, scale, radius, color: chargeColor };
   }
 }

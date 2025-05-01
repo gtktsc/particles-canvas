@@ -3,6 +3,7 @@
 import {
   CENTER_ATTRACTION,
   CENTER_ATTRACTION_POINT,
+  CHANGE_STRENGTH,
   DAMPING,
   NUMBER_OF_PARTICLES,
   WORLD_HEIGHT,
@@ -23,6 +24,7 @@ export type SimulationSettings = {
   centerAttractionPoint: Vector3;
   fov: number;
   cameraPosition: Vector3;
+  chargeStrength: number;
 };
 
 const defaultSettings: SimulationSettings = {
@@ -33,6 +35,7 @@ const defaultSettings: SimulationSettings = {
   damping: DAMPING,
   numberOfParticles: NUMBER_OF_PARTICLES,
   centerAttractionPoint: CENTER_ATTRACTION_POINT,
+  chargeStrength: CHANGE_STRENGTH,
   fov: getInitialFOV(),
   cameraPosition: getInitialCameraPosition(),
 };

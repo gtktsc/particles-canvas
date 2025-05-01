@@ -45,6 +45,10 @@ export class Vector3 {
     return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z);
   }
 
+  lengthSq() {
+    return this.x * this.x + this.y * this.y + this.z * this.z;
+  }
+
   normalize() {
     const len = this.length() || 1;
     return this.scale(1 / len);

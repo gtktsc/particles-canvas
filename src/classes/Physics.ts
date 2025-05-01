@@ -1,8 +1,14 @@
 import { Particle } from "@/classes/Particle";
 import { Vector3 } from "@/classes/Vector3";
+import { SimulationSettings } from "@/context/SimulationSettingsContext";
 
 export class Physics {
+  settings: SimulationSettings;
   grid = new Map<number, Particle[]>();
+
+  constructor(settings: SimulationSettings) {
+    this.settings = settings;
+  }
 
   index(particles: Particle[], cellSize: number) {
     this.grid.clear();
@@ -113,6 +119,73 @@ export class Physics {
 
                   p1.collided = p2.collided = true;
                 }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  resolveCharges() {
+    const processedChargePairs = new Set<number>();
+
+    for (const [key, cellParticles] of this.grid.entries()) {
+      const cx = (key >> 20) & 0x3ff;
+      const cy = (key >> 10) & 0x3ff;
+      const cz = key & 0x3ff;
+
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dz = -1; dz <= 1; dz++) {
+            const nx = cx + dx;
+            const ny = cy + dy;
+            const nz = cz + dz;
+
+            if (
+              nx < 0 ||
+              ny < 0 ||
+              nz < 0 ||
+              nx > 1023 ||
+              ny > 1023 ||
+              nz > 1023
+            )
+              continue;
+
+            const neighborKey =
+              ((nx & 0x3ff) << 20) | ((ny & 0x3ff) << 10) | (nz & 0x3ff);
+            const neighborParticles = this.grid.get(neighborKey);
+            if (!neighborParticles) continue;
+
+            for (const p1 of cellParticles) {
+              if (p1.charge === 0) continue;
+
+              for (const p2 of neighborParticles) {
+                if (p2.charge === 0 || p1 === p2 || p1._id >= p2._id) continue;
+
+                const pairId =
+                  (Math.min(p1._id, p2._id) << 16) | Math.max(p1._id, p2._id);
+                if (processedChargePairs.has(pairId)) continue;
+                processedChargePairs.add(pairId);
+
+                const dir = Vector3.scratch1
+                  .copyFrom(p2.position)
+                  .sub(p1.position);
+                const distSq = dir.lengthSq() + 1;
+
+                const forceMagnitude =
+                  (this.settings.chargeStrength *
+                    Math.abs(p1.charge * p2.charge)) /
+                  distSq;
+
+                const forceDirection = dir.normalize();
+                const isAttracting = p1.charge * p2.charge < 0;
+                const force = isAttracting
+                  ? forceDirection.scale(forceMagnitude)
+                  : forceDirection.scale(-forceMagnitude);
+
+                p1.applyForce(force);
+                p2.applyForce(force.clone().scale(-1));
               }
             }
           }

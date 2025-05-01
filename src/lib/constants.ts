@@ -1,12 +1,13 @@
 import { Vector3 } from "@/classes/Vector3";
 
 export const WORLD_SCALE = 1;
-export const NUMBER_OF_PARTICLES = 7000;
+export const NUMBER_OF_PARTICLES = 300;
 export const DAMPING = 1;
+export const CHANGE_STRENGTH = 100;
 export const CENTER_ATTRACTION = 0;
-export const WORLD_Z = 800;
-export const WORLD_WIDTH = 800;
-export const WORLD_HEIGHT = 800;
+export const WORLD_Z = 400;
+export const WORLD_WIDTH = 400;
+export const WORLD_HEIGHT = 400;
 export const CENTER_ATTRACTION_POINT = new Vector3(0, 0, 0);
 export const CONTROL_CONFIG = {
   world: [
@@ -52,6 +53,13 @@ export const CONTROL_CONFIG = {
   ],
   physics: [
     { label: "Damping", key: "damping", min: 0.8, max: 1.0, step: 0.01 },
+    {
+      label: "Charge Strength",
+      key: "chargeStrength",
+      min: 0,
+      max: 500,
+      step: 1,
+    },
     {
       label: "Particles",
       key: "numberOfParticles",

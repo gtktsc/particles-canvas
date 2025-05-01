@@ -34,7 +34,7 @@ export function useSimulationInitializer({
         new Particle(settings.worldWidth, settings.worldHeight, settings.worldZ)
     );
 
-    refs.physicsRef.current = new Physics();
+    refs.physicsRef.current = new Physics(settings);
     refs.mouseRef.current = new Mouse3D(canvas);
     refs.worldRef.current = new World(
       settings.worldWidth,
