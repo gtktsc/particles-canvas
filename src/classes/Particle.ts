@@ -65,20 +65,26 @@ export class Particle {
     );
     const dist = this.position.distanceTo(center) + 0.01;
     this.velocity.add(toCenter.scale((1 / dist) * centerAttraction));
+    this.collided = false;
   }
 
-  render(
-    ctx: CanvasRenderingContext2D,
+  projectToScreen(
     width: number,
     height: number,
     fov: number,
     camera: Vector3,
     overrideColor?: string
-  ) {
-    const relative = this.position.clone().sub(camera);
+  ): {
+    px: number;
+    py: number;
+    scale: number;
+    radius: number;
+    color: string;
+  } | null {
+    const relative = Vector3.scratch1.copyFrom(this.position).sub(camera);
     const scale = fov / (fov + relative.z);
 
-    if (scale <= 0 || !Number.isFinite(scale)) return;
+    if (relative.z < -fov) return null;
 
     const px = width / 2 + relative.x * scale;
     const py = height / 2 + relative.y * scale;
@@ -86,14 +92,13 @@ export class Particle {
     const radius = scale * this.radius;
     const alpha = Math.max(0, Math.min(1, scale));
 
-    if (scale <= 0 || !Number.isFinite(scale) || radius < 0.5) return;
     if (
       px + radius < 0 ||
       px - radius > width ||
       py + radius < 0 ||
       py - radius > height
     )
-      return;
+      return null;
 
     const speed = this.velocity.length();
     const minSpeed = 0;
@@ -105,32 +110,10 @@ export class Particle {
     const b = Math.round(255 * t);
 
     const baseColor = `rgba(${r}, ${g}, ${b}, 1)`;
-    if (radius > 1) {
-      const dx = -this.velocity.x * scale;
-      const dy = -this.velocity.y * scale;
-
-      const gradient = ctx.createLinearGradient(px + dx, py + dy, px, py);
-      gradient.addColorStop(0, baseColor.replace(/1\)$/, `0)`));
-      gradient.addColorStop(1, baseColor.replace(/1\)$/, `${alpha})`));
-
-      ctx.beginPath();
-      ctx.moveTo(px + dx, py + dy);
-      ctx.lineTo(px, py);
-      ctx.strokeStyle = gradient;
-      ctx.lineWidth = radius * 0.5;
-      ctx.stroke();
-    }
-
-    ctx.beginPath();
-    ctx.arc(px, py, radius, 0, Math.PI * 2);
     const color = overrideColor
       ? overrideColor
-      : this.collided
-      ? "rgba(0, 255, 255, 1)"
-      : baseColor;
-    ctx.fillStyle = color.replace(/1\)$/, `${alpha})`);
-    ctx.fill();
+      : baseColor.replace(/1\)$/, `${alpha})`);
 
-    this.collided = false;
+    return { px, py, scale, radius, color };
   }
 }

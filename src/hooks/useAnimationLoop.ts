@@ -72,19 +72,65 @@ export function useAnimationLoop({
       physics.resolveCollisions();
     }
 
-    particles.forEach((p) => {
+    const colorGroups: Record<
+      string,
+      { px: number; py: number; radius: number }[]
+    > = {};
+
+    if (refs.frameCount.current % 4 === 0) {
+      refs.sortedParticlesRef.current = [...particles].sort(
+        (a, b) => a.position.z - b.position.z
+      );
+    }
+    const sortedParticles = refs.sortedParticlesRef.current ?? particles;
+
+    const pixelBuffer = new Set<number>();
+
+    for (let i = 0; i < sortedParticles.length; i++) {
+      const p = sortedParticles[i];
       const baseColor = mouse.contains(p.position)
-        ? "rgba(255, 255, 255, 1)"
+        ? "rgba(255,255,255,1)"
         : undefined;
-      p.render(
-        ctx,
+
+      const proj = p.projectToScreen(
         width,
         height,
         settings.fov,
         settings.cameraPosition,
         baseColor
       );
-    });
+      if (!proj) continue;
+
+      const pixelX = Math.floor(proj.px);
+      const pixelY = Math.floor(proj.py);
+      const pixelKey = (pixelX << 16) | pixelY;
+
+      if (pixelBuffer.has(pixelKey)) continue;
+      pixelBuffer.add(pixelKey);
+
+      const color = proj.color;
+      if (!colorGroups[color]) colorGroups[color] = [];
+
+      colorGroups[color].push({
+        px: proj.px,
+        py: proj.py,
+        radius: proj.radius,
+      });
+    }
+
+    for (const color in colorGroups) {
+      const group = colorGroups[color];
+      ctx.beginPath();
+
+      for (let i = 0; i < group.length; i++) {
+        const { px, py, radius } = group[i];
+        ctx.moveTo(px + radius, py);
+        ctx.arc(px, py, radius, 0, Math.PI * 2);
+      }
+
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
 
     mouse.render(ctx, settings.fov, settings.cameraPosition);
     refs.requestRef.current = requestAnimationFrame(() => animate(ctx));

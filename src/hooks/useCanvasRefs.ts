@@ -14,6 +14,7 @@ export type CanvasRefs = {
   worldRef: React.RefObject<World | null>;
   lastFpsTime: React.RefObject<number>;
   smoothedFps: React.RefObject<number>;
+  sortedParticlesRef: React.RefObject<Particle[]>;
 };
 
 export function useCanvasRefs(): CanvasRefs {
@@ -27,5 +28,6 @@ export function useCanvasRefs(): CanvasRefs {
     worldRef: useRef<World | null>(null),
     lastFpsTime: useRef<number>(performance.now()),
     smoothedFps: useRef<number>(0),
+    sortedParticlesRef: useRef<Particle[]>([]),
   };
 }

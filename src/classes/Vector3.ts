@@ -1,5 +1,9 @@
 export class Vector3 {
-  constructor(public x: number, public y: number, public z: number) {}
+  constructor(
+    public x: number = 0,
+    public y: number = 0,
+    public z: number = 0
+  ) {}
 
   add(v: Vector3) {
     this.x += v.x;
@@ -25,6 +29,7 @@ export class Vector3 {
   clone() {
     return new Vector3(this.x, this.y, this.z);
   }
+
   sub(v: Vector3) {
     this.x -= v.x;
     this.y -= v.y;
@@ -48,4 +53,15 @@ export class Vector3 {
   toString() {
     return `${this.x.toFixed(2)},${this.y.toFixed(2)},${this.z.toFixed(2)}`;
   }
+
+  copyFrom(v: Vector3) {
+    this.x = v.x;
+    this.y = v.y;
+    this.z = v.z;
+    return this;
+  }
+
+  static scratch1 = new Vector3();
+  static scratch2 = new Vector3();
+  static scratch3 = new Vector3();
 }
