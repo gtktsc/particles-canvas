@@ -7,7 +7,6 @@ import {
   CENTER_ATTRACTION_POINT,
   CONTROL_CONFIG,
   DAMPING,
-  NUMBER_OF_PARTICLES,
   WORLD_HEIGHT,
   WORLD_WIDTH,
   WORLD_Z,
@@ -139,6 +138,25 @@ export default function Controls() {
         <summary
           style={{ cursor: "pointer", fontWeight: "bold", marginBottom: 10 }}
         >
+          Particles
+        </summary>
+        {CONTROL_CONFIG.particles.map((cfg) =>
+          makeSlider(cfg.label, cfg.key, cfg.min, cfg.max, cfg.step)
+        )}
+        <button
+          style={{ marginTop: 5 }}
+          onClick={() =>
+            setSettings({ electrons: 100, protons: 100, neutrons: 100 })
+          }
+        >
+          Reset Particles
+        </button>
+      </details>
+
+      <details>
+        <summary
+          style={{ cursor: "pointer", fontWeight: "bold", marginBottom: 10 }}
+        >
           Physics
         </summary>
         {CONTROL_CONFIG.physics.map((cfg) =>
@@ -149,7 +167,6 @@ export default function Controls() {
           onClick={() =>
             setSettings({
               damping: DAMPING,
-              numberOfParticles: NUMBER_OF_PARTICLES,
             })
           }
         >

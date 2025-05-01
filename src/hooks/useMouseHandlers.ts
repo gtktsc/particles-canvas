@@ -27,8 +27,11 @@ export function useMouseHandlers({
   const handleMouseUp = () => {
     const result = refs.mouseRef.current?.endDrag();
     if (result) {
-      const force = result.force.clone().scale(FORCE_SCALE);
-      result.targets.forEach((p: Particle) => p.applyForce(force.clone()));
+      result.targets.forEach((p: Particle) => {
+        const force = result.force.clone().scale(p.mass * FORCE_SCALE);
+
+        p.applyForce(force.clone());
+      });
     }
   };
 

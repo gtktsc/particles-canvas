@@ -1,39 +1,59 @@
-import {
-  getInitialParticleSize,
-  getInitialPosition,
-  getInitialVelocity,
-} from "@/lib/defaults";
+import { getInitialPosition, getInitialVelocity } from "@/lib/defaults";
 import { Vector3 } from "@/classes/Vector3";
 
 let particleIdCounter = 0;
-export type Charge = -1 | 0 | 1; // negative, neutral, positive
+export type Charge = -1 | 0 | 1;
+export type ParticleType = "proton" | "neutron" | "electron";
 
 export class Particle {
+  type: ParticleType;
+
   _id: number;
   position: Vector3;
   velocity: Vector3;
   radius: number;
   charge: Charge;
+  mass: number;
 
   collided = false;
 
-  constructor(worldWidth: number, worldHeight: number, worldZ: number) {
-    this._id = particleIdCounter++;
+  constructor(
+    worldWidth: number,
+    worldHeight: number,
+    worldZ: number,
+    type: ParticleType
+  ) {
+    this.type = type;
 
-    this.radius = getInitialParticleSize();
+    switch (type) {
+      case "electron":
+        this.charge = -1;
+        this.radius = 1;
+        this.mass = 1;
+        break;
+      case "proton":
+        this.charge = 1;
+        this.radius = 3;
+        this.mass = 1836;
+        break;
+      case "neutron":
+        this.charge = 0;
+        this.radius = 3;
+        this.mass = 1839;
+        break;
+    }
+
+    this._id = particleIdCounter++;
 
     const { x, y, z } = getInitialPosition(worldWidth, worldHeight, worldZ);
     this.position = new Vector3(x, y, z);
 
     const { x: vx, y: vy, z: vz } = getInitialVelocity();
     this.velocity = new Vector3(vx, vy, vz);
-
-    const rand = Math.random();
-    this.charge = rand < 0.33 ? -1 : rand < 0.66 ? 0 : 1;
   }
 
   applyForce(force: Vector3) {
-    this.velocity.add(force);
+    this.velocity.add(Vector3.scratch1.copyFrom(force).scale(1 / this.mass));
   }
 
   update(
@@ -70,7 +90,23 @@ export class Particle {
       0 - this.position.z
     );
     const dist = this.position.distanceTo(center) + 0.01;
+
+    const attractionForce = toCenter
+      .clone()
+      .normalize()
+      .scale((1 / dist) * centerAttraction);
+    this.velocity.add(attractionForce);
+
+    if (this.type === "electron") {
+      // Pick an arbitrary axis to generate perpendicular vector (stable in 3D)
+      const tangent = toCenter.clone().cross(new Vector3(0, 0, 1)).normalize();
+
+      const orbitalSpeed = Math.sqrt(centerAttraction / dist);
+      this.velocity.add(tangent.scale(orbitalSpeed));
+    }
+
     this.velocity.add(toCenter.scale((1 / dist) * centerAttraction));
+
     this.collided = false;
   }
 
@@ -78,8 +114,7 @@ export class Particle {
     width: number,
     height: number,
     fov: number,
-    camera: Vector3,
-    overrideColor?: string
+    camera: Vector3
   ): {
     px: number;
     py: number;
@@ -96,7 +131,6 @@ export class Particle {
     const py = height / 2 + relative.y * scale;
 
     const radius = scale * this.radius;
-    const alpha = Math.max(0, Math.min(1, scale));
 
     if (
       px + radius < 0 ||
@@ -106,26 +140,12 @@ export class Particle {
     )
       return null;
 
-    const speed = this.velocity.length();
-    const minSpeed = 0;
-    const maxSpeed = 5;
-    const t = Math.min(1, (speed - minSpeed) / (maxSpeed - minSpeed));
-
-    const r = Math.round(255 * (1 - t));
-    const g = Math.round(255 * Math.min(1, t * 2));
-    const b = Math.round(255 * t);
-
-    const baseColor = `rgba(${r}, ${g}, ${b}, 1)`;
-    const color = overrideColor
-      ? overrideColor
-      : baseColor.replace(/1\)$/, `${alpha})`);
-
-    const chargeColor =
-      this.charge === -1
-        ? `rgba(0, 0, 255, ${alpha})`
-        : this.charge === 1
-        ? `rgba(255, 0, 0, ${alpha})`
-        : baseColor.replace(/1\)$/, `${alpha})`);
+    let chargeColor = "rgba(255, 255, 255, 1)";
+    if (this.charge === -1) {
+      chargeColor = "rgba(0, 0, 255, 1)";
+    } else if (this.charge === 1) {
+      chargeColor = "rgba(255, 0, 0, 1)";
+    }
 
     return { px, py, scale, radius, color: chargeColor };
   }

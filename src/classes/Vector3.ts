@@ -19,6 +19,16 @@ export class Vector3 {
     return this;
   }
 
+  cross(v: Vector3) {
+    const x = this.y * v.z - this.z * v.y;
+    const y = this.z * v.x - this.x * v.z;
+    const z = this.x * v.y - this.y * v.x;
+    this.x = x;
+    this.y = y;
+    this.z = z;
+    return this;
+  }
+
   distanceTo(v: Vector3) {
     const dx = this.x - v.x;
     const dy = this.y - v.y;

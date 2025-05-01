@@ -25,15 +25,38 @@ export function useCanvas() {
 
   useEffect(() => {
     if (refs.particlesRef.current) {
-      refs.particlesRef.current = Array.from(
-        { length: settings.numberOfParticles },
-        () =>
-          new Particle(
-            settings.worldWidth,
-            settings.worldHeight,
-            settings.worldZ
-          )
-      );
+      refs.particlesRef.current = [
+        ...Array.from(
+          { length: settings.electrons },
+          () =>
+            new Particle(
+              settings.worldWidth,
+              settings.worldHeight,
+              settings.worldZ,
+              "electron"
+            )
+        ),
+        ...Array.from(
+          { length: settings.protons },
+          () =>
+            new Particle(
+              settings.worldWidth,
+              settings.worldHeight,
+              settings.worldZ,
+              "proton"
+            )
+        ),
+        ...Array.from(
+          { length: settings.neutrons },
+          () =>
+            new Particle(
+              settings.worldWidth,
+              settings.worldHeight,
+              settings.worldZ,
+              "neutron"
+            )
+        ),
+      ];
     }
   }, [settings, refs.particlesRef]);
 

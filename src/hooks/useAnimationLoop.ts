@@ -25,6 +25,11 @@ export function useAnimationLoop({
       initialize(ctx.canvas);
     }
 
+    ctx.save();
+    ctx.translate(width / 2, height / 2);
+    ctx.scale(settings.zoom, settings.zoom);
+    ctx.translate(-width / 2, -height / 2);
+
     const now = performance.now();
     const delta = now - refs.lastFpsTime.current;
     if (delta >= 1000) {
@@ -93,16 +98,12 @@ export function useAnimationLoop({
 
     for (let i = 0; i < sortedParticles.length; i++) {
       const p = sortedParticles[i];
-      const baseColor = mouse.contains(p.position)
-        ? "rgba(255,255,255,1)"
-        : undefined;
 
       const proj = p.projectToScreen(
         width,
         height,
         settings.fov,
-        settings.cameraPosition,
-        baseColor
+        settings.cameraPosition
       );
       if (!proj) continue;
 
@@ -138,6 +139,8 @@ export function useAnimationLoop({
     }
 
     mouse.render(ctx, settings.fov, settings.cameraPosition);
+    ctx.restore();
+
     refs.requestRef.current = requestAnimationFrame(() => animate(ctx));
 
     const fpsText = `FPS: ${refs.smoothedFps.current}`;

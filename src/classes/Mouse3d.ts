@@ -4,6 +4,7 @@ import { WORLD_WIDTH, WORLD_HEIGHT, WORLD_Z } from "@/lib/constants";
 import { Box3D } from "@/classes/Box3d";
 
 export class Mouse3D {
+  zoom: number;
   position = new Vector3(0, 0, 0);
   z = 0;
   size = Math.max(WORLD_WIDTH, WORLD_HEIGHT, WORLD_Z);
@@ -20,10 +21,12 @@ export class Mouse3D {
   private dragEnd?: Vector3;
   private draggedParticles: Particle[] = [];
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(canvas: HTMLCanvasElement, zoom: number) {
     this.canvas = canvas;
     this.lastScreenX = canvas.width / 2;
     this.lastScreenY = canvas.height / 2;
+
+    this.zoom = zoom;
 
     window.addEventListener("mousemove", this.onMouseMove);
     window.addEventListener("keydown", this.onKeyDown);
@@ -34,12 +37,19 @@ export class Mouse3D {
     window.removeEventListener("keydown", this.onKeyDown);
   }
 
-  private screenToWorld(screenX: number, screenY: number, z: number): Vector3 {
+  private screenToWorld(
+    screenX: number,
+    screenY: number,
+    z: number,
+    zoom: number
+  ): Vector3 {
     const { width, height } = this.canvas;
     const scale = this.fov / (this.fov + z);
-    const worldX = (screenX - width / 2) / scale;
-    const worldY = (screenY - height / 2) / scale;
-    return new Vector3(worldX, worldY, z);
+
+    const adjustedX = (screenX - width / 2) / (scale * zoom);
+    const adjustedY = (screenY - height / 2) / (scale * zoom);
+
+    return new Vector3(adjustedX, adjustedY, z);
   }
 
   contains(point: Vector3): boolean {
@@ -57,7 +67,8 @@ export class Mouse3D {
     this.position = this.screenToWorld(
       this.lastScreenX,
       this.lastScreenY,
-      this.z
+      this.z,
+      this.zoom
     );
   };
 
@@ -70,7 +81,8 @@ export class Mouse3D {
     this.position = this.screenToWorld(
       this.lastScreenX,
       this.lastScreenY,
-      this.z
+      this.z,
+      this.zoom
     );
   };
 

@@ -21,8 +21,16 @@ export const getInitialVelocity = () => {
   };
 };
 
-export const getInitialParticleSize = () => {
-  return Math.random() * 10 + 5;
+export const getInitialElectronsNumber = () => {
+  return 6;
+};
+
+export const getInitialProtonsNumber = () => {
+  return 6;
+};
+
+export const getInitialNeutronsNumber = () => {
+  return 6;
 };
 
 export const getInitialFOV = () => {

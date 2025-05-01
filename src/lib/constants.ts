@@ -2,12 +2,13 @@ import { Vector3 } from "@/classes/Vector3";
 
 export const WORLD_SCALE = 1;
 export const NUMBER_OF_PARTICLES = 300;
-export const DAMPING = 1;
-export const CHANGE_STRENGTH = 100;
-export const CENTER_ATTRACTION = 0;
+export const DAMPING = 0.8;
+export const CHANGE_STRENGTH = 500;
+export const CENTER_ATTRACTION = 1.5;
 export const WORLD_Z = 400;
 export const WORLD_WIDTH = 400;
 export const WORLD_HEIGHT = 400;
+export const ZOOM = 1;
 export const CENTER_ATTRACTION_POINT = new Vector3(0, 0, 0);
 export const CONTROL_CONFIG = {
   world: [
@@ -15,6 +16,7 @@ export const CONTROL_CONFIG = {
     { label: "Height", key: "worldHeight", min: 100, max: 1000, step: 1 },
     { label: "Depth", key: "worldZ", min: 100, max: 1000, step: 1 },
     { label: "FOV", key: "fov", min: 100, max: 2000, step: 10 },
+    { label: "Zoom", key: "zoom", min: 0.1, max: 5, step: 0.1 },
   ],
   center: [
     {
@@ -60,12 +62,10 @@ export const CONTROL_CONFIG = {
       max: 500,
       step: 1,
     },
-    {
-      label: "Particles",
-      key: "numberOfParticles",
-      min: 50,
-      max: 10000,
-      step: 10,
-    },
+  ],
+  particles: [
+    { label: "Electrons", key: "electrons", min: 0, max: 100, step: 1 },
+    { label: "Protons", key: "protons", min: 0, max: 100, step: 1 },
+    { label: "Neutrons", key: "neutrons", min: 0, max: 100, step: 1 },
   ],
 };

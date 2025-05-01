@@ -5,14 +5,20 @@ import {
   CENTER_ATTRACTION_POINT,
   CHANGE_STRENGTH,
   DAMPING,
-  NUMBER_OF_PARTICLES,
   WORLD_HEIGHT,
   WORLD_WIDTH,
   WORLD_Z,
+  ZOOM,
 } from "@/lib/constants";
 import { Vector3 } from "@/classes/Vector3";
 import { createContext, useContext, useState, ReactNode } from "react";
-import { getInitialCameraPosition, getInitialFOV } from "@/lib/defaults";
+import {
+  getInitialCameraPosition,
+  getInitialElectronsNumber,
+  getInitialFOV,
+  getInitialNeutronsNumber,
+  getInitialProtonsNumber,
+} from "@/lib/defaults";
 
 export type SimulationSettings = {
   worldWidth: number;
@@ -20,11 +26,14 @@ export type SimulationSettings = {
   worldZ: number;
   centerAttraction: number;
   damping: number;
-  numberOfParticles: number;
   centerAttractionPoint: Vector3;
   fov: number;
   cameraPosition: Vector3;
   chargeStrength: number;
+  electrons: number;
+  protons: number;
+  neutrons: number;
+  zoom: number;
 };
 
 const defaultSettings: SimulationSettings = {
@@ -33,11 +42,14 @@ const defaultSettings: SimulationSettings = {
   worldZ: WORLD_Z,
   centerAttraction: CENTER_ATTRACTION,
   damping: DAMPING,
-  numberOfParticles: NUMBER_OF_PARTICLES,
   centerAttractionPoint: CENTER_ATTRACTION_POINT,
   chargeStrength: CHANGE_STRENGTH,
+  zoom: ZOOM,
   fov: getInitialFOV(),
   cameraPosition: getInitialCameraPosition(),
+  electrons: getInitialElectronsNumber(),
+  protons: getInitialProtonsNumber(),
+  neutrons: getInitialNeutronsNumber(),
 };
 
 const SimulationSettingsContext = createContext<
