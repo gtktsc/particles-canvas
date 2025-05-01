@@ -40,3 +40,7 @@ export const getInitialFOV = () => {
 export const getInitialCameraPosition = () => {
   return new Vector3(0, 0, -getInitialFOV());
 };
+
+export const getShellIndex = (electronIndex: number): number => {
+  return Math.floor(Math.sqrt(electronIndex));
+};

@@ -1,6 +1,5 @@
 import { CanvasRefs } from "@/hooks/useCanvasRefs";
 import { SimulationSettings } from "@/context/SimulationSettingsContext";
-import { Vector3 } from "@/classes/Vector3";
 
 type useAnimationLoopProps = {
   refs: CanvasRefs;

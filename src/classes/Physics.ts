@@ -25,12 +25,9 @@ export class Physics {
     const z = Math.floor(pos.z / cellSize);
 
     const OFFSET = 512;
-    const key =
-      (((x + OFFSET) & 0x3ff) << 20) |
-      (((y + OFFSET) & 0x3ff) << 10) |
-      ((z + OFFSET) & 0x3ff);
-
-    return key;
+    return (((x + OFFSET) & 0x3ff) << 20) |
+           (((y + OFFSET) & 0x3ff) << 10) |
+           ((z + OFFSET) & 0x3ff);
   }
 
   resolveCollisions() {
@@ -48,18 +45,9 @@ export class Physics {
             const ny = cy + dy;
             const nz = cz + dz;
 
-            if (
-              nx < 0 ||
-              ny < 0 ||
-              nz < 0 ||
-              nx > 1023 ||
-              ny > 1023 ||
-              nz > 1023
-            )
-              continue;
+            if (nx < 0 || ny < 0 || nz < 0 || nx > 1023 || ny > 1023 || nz > 1023) continue;
 
-            const neighborKey =
-              ((nx & 0x3ff) << 20) | ((ny & 0x3ff) << 10) | (nz & 0x3ff);
+            const neighborKey = ((nx & 0x3ff) << 20) | ((ny & 0x3ff) << 10) | (nz & 0x3ff);
             const neighborParticles = this.grid.get(neighborKey);
             if (!neighborParticles) continue;
 
@@ -70,50 +58,28 @@ export class Physics {
                 const dx = Math.abs(p2.position.x - p1.position.x);
                 const dy = Math.abs(p2.position.y - p1.position.y);
                 const dz = Math.abs(p2.position.z - p1.position.z);
-                if (
-                  dx > p1.radius + p2.radius ||
-                  dy > p1.radius + p2.radius ||
-                  dz > p1.radius + p2.radius
-                )
-                  continue;
+                if (dx > p1.radius + p2.radius || dy > p1.radius + p2.radius || dz > p1.radius + p2.radius) continue;
 
-                const min = Math.min(p1._id, p2._id);
-                const max = Math.max(p1._id, p2._id);
-                const id = (min << 16) | max;
-
+                const id = (Math.min(p1._id, p2._id) << 16) | Math.max(p1._id, p2._id);
                 if (processed.has(id)) continue;
                 processed.add(id);
 
-                const delta = Vector3.scratch1
-                  .copyFrom(p2.position)
-                  .sub(p1.position);
+                const delta = Vector3.scratch1.copyFrom(p2.position).sub(p1.position);
                 const dist = delta.length();
                 const minDist = p1.radius + p2.radius;
 
                 if (dist < minDist) {
-                  const normal = Vector3.scratch2
-                    .copyFrom(delta)
-                    .scale(1 / (dist || 1));
+                  const normal = Vector3.scratch2.copyFrom(delta).scale(1 / (dist || 1));
                   const overlap = minDist - dist;
-                  const correction = Vector3.scratch3
-                    .copyFrom(normal)
-                    .scale(overlap / 2);
-
+                  const correction = Vector3.scratch3.copyFrom(normal).scale(overlap / 2);
                   p1.position.sub(correction);
                   p2.position.add(correction);
 
-                  const relVel = Vector3.scratch1
-                    .copyFrom(p2.velocity)
-                    .sub(p1.velocity);
+                  const relVel = Vector3.scratch1.copyFrom(p2.velocity).sub(p1.velocity);
                   const speed = relVel.dot(normal);
-
                   if (speed < 0) {
-                    const impulse = Vector3.scratch2
-                      .copyFrom(normal)
-                      .scale(-speed);
-                    p1.velocity.sub(
-                      Vector3.scratch3.copyFrom(impulse).scale(0.5)
-                    );
+                    const impulse = Vector3.scratch2.copyFrom(normal).scale(-speed);
+                    p1.velocity.sub(Vector3.scratch3.copyFrom(impulse).scale(0.5));
                     p2.velocity.add(impulse.scale(0.5));
                   }
 
@@ -128,7 +94,7 @@ export class Physics {
   }
 
   resolveCharges() {
-    const processedChargePairs = new Set<number>();
+    const processed = new Set<number>();
 
     for (const [key, cellParticles] of this.grid.entries()) {
       const cx = (key >> 20) & 0x3ff;
@@ -142,18 +108,9 @@ export class Physics {
             const ny = cy + dy;
             const nz = cz + dz;
 
-            if (
-              nx < 0 ||
-              ny < 0 ||
-              nz < 0 ||
-              nx > 1023 ||
-              ny > 1023 ||
-              nz > 1023
-            )
-              continue;
+            if (nx < 0 || ny < 0 || nz < 0 || nx > 1023 || ny > 1023 || nz > 1023) continue;
 
-            const neighborKey =
-              ((nx & 0x3ff) << 20) | ((ny & 0x3ff) << 10) | (nz & 0x3ff);
+            const neighborKey = ((nx & 0x3ff) << 20) | ((ny & 0x3ff) << 10) | (nz & 0x3ff);
             const neighborParticles = this.grid.get(neighborKey);
             if (!neighborParticles) continue;
 
@@ -163,26 +120,17 @@ export class Physics {
               for (const p2 of neighborParticles) {
                 if (p2.charge === 0 || p1 === p2 || p1._id >= p2._id) continue;
 
-                const pairId =
-                  (Math.min(p1._id, p2._id) << 16) | Math.max(p1._id, p2._id);
-                if (processedChargePairs.has(pairId)) continue;
-                processedChargePairs.add(pairId);
+                const id = (Math.min(p1._id, p2._id) << 16) | Math.max(p1._id, p2._id);
+                if (processed.has(id)) continue;
+                processed.add(id);
 
-                const dir = Vector3.scratch1
-                  .copyFrom(p2.position)
-                  .sub(p1.position);
+                const dir = Vector3.scratch1.copyFrom(p2.position).sub(p1.position);
                 const distSq = dir.lengthSq() + 1;
 
-                const forceMagnitude =
-                  (this.settings.chargeStrength *
-                    Math.abs(p1.charge * p2.charge)) /
-                  distSq;
-
-                const forceDirection = dir.normalize();
-                const isAttracting = p1.charge * p2.charge < 0;
-                const force = isAttracting
-                  ? forceDirection.scale(forceMagnitude)
-                  : forceDirection.scale(-forceMagnitude);
+                const forceMagnitude = (this.settings.chargeStrength * Math.abs(p1.charge * p2.charge)) / distSq;
+                const force = dir.normalize().scale(
+                  p1.charge * p2.charge < 0 ? forceMagnitude : -forceMagnitude
+                );
 
                 p1.applyForce(force);
                 p2.applyForce(force.clone().scale(-1));
@@ -191,6 +139,48 @@ export class Physics {
           }
         }
       }
+    }
+  }
+
+  resolveStrongNuclearForce(particles: Particle[]) {
+    const range = this.settings.nuclearRange;
+    const strength = this.settings.nuclearStrength;
+
+    for (let i = 0; i < particles.length; i++) {
+      const p1 = particles[i];
+      if (p1.type === "electron") continue;
+
+      for (let j = i + 1; j < particles.length; j++) {
+        const p2 = particles[j];
+        if (p2.type === "electron") continue;
+
+        const delta = Vector3.scratch1.copyFrom(p2.position).sub(p1.position);
+        const dist = delta.length();
+        if (dist > range) continue;
+
+        const force = delta
+          .normalize()
+          .scale((1 - dist / range) * strength);
+
+        p1.applyForce(force);
+        p2.applyForce(force.clone().scale(-1));
+      }
+    }
+  }
+
+  resolveElectronShells(particles: Particle[], center: Vector3) {
+    const k = this.settings.shellConstraintK;
+
+    for (const p of particles) {
+      if (p.type !== "electron") continue;
+
+      const toCenter = Vector3.scratch1.copyFrom(center).sub(p.position);
+      const dist = toCenter.length();
+      const target = p.shellRadius ?? this.settings.defaultElectronRadius;
+      const offset = dist - target;
+
+      const force = toCenter.normalize().scale(k * offset);
+      p.applyForce(force);
     }
   }
 }

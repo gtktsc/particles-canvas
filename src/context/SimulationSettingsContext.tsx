@@ -34,6 +34,10 @@ export type SimulationSettings = {
   protons: number;
   neutrons: number;
   zoom: number;
+  nuclearRange: number;
+  nuclearStrength: number;
+  shellConstraintK: number;
+  defaultElectronRadius: number;
 };
 
 const defaultSettings: SimulationSettings = {
@@ -50,6 +54,10 @@ const defaultSettings: SimulationSettings = {
   electrons: getInitialElectronsNumber(),
   protons: getInitialProtonsNumber(),
   neutrons: getInitialNeutronsNumber(),
+  nuclearRange: 10,
+  nuclearStrength: 25,
+  shellConstraintK: 0.5,
+  defaultElectronRadius: 50,
 };
 
 const SimulationSettingsContext = createContext<

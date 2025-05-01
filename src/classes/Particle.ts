@@ -1,4 +1,8 @@
-import { getInitialPosition, getInitialVelocity } from "@/lib/defaults";
+import {
+  getInitialPosition,
+  getInitialVelocity,
+  getShellIndex,
+} from "@/lib/defaults";
 import { Vector3 } from "@/classes/Vector3";
 
 let particleIdCounter = 0;
@@ -14,6 +18,7 @@ export class Particle {
   radius: number;
   charge: Charge;
   mass: number;
+  shellRadius?: number;
 
   collided = false;
 
@@ -21,15 +26,24 @@ export class Particle {
     worldWidth: number,
     worldHeight: number,
     worldZ: number,
-    type: ParticleType
+    type: ParticleType,
+    shellIndex: number | undefined = undefined
   ) {
     this.type = type;
+    this._id = particleIdCounter++;
 
     switch (type) {
       case "electron":
         this.charge = -1;
         this.radius = 1;
         this.mass = 1;
+
+        if (shellIndex === undefined) {
+          shellIndex = getShellIndex(this._id);
+        }
+
+        this.shellRadius = 50 + shellIndex * 30;
+
         break;
       case "proton":
         this.charge = 1;
@@ -42,8 +56,6 @@ export class Particle {
         this.mass = 1839;
         break;
     }
-
-    this._id = particleIdCounter++;
 
     const { x, y, z } = getInitialPosition(worldWidth, worldHeight, worldZ);
     this.position = new Vector3(x, y, z);
