@@ -81,6 +81,14 @@ export function useAnimationLoop({
       physics.resolveCharges();
     }
 
+    if (refs.frameCount.current % 2 === 0) {
+      physics.resolveElectronShells(particles, center);
+    }
+
+    if (refs.frameCount.current % 2 === 0) {
+      physics.resolveStrongNuclearForce(particles);
+    }
+
     const colorGroups: Record<
       string,
       { px: number; py: number; radius: number }[]
