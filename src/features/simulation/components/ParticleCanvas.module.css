@@ -1,0 +1,9 @@
+.canvas {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-index-canvas);
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  touch-action: none;
+}

@@ -1,98 +1,63 @@
-# 🌀 Particle Simulation App (Canvas, CPU-only)
+# Particle Simulation App
 
-A real-time 3D atomic particle simulation rendered with the HTML Canvas API and powered by a modular CPU-based physics engine. This educational demo visualizes subatomic interactions such as collisions, electrostatic forces, orbital shells, and nuclear attraction — all computed in JavaScript with adjustable parameters.
+CPU-only 3D particle simulation rendered with the HTML Canvas API.
 
-## 🌟 Features
+## Stack
 
-- 🎨 Canvas-based 2D rendering of a simulated 3D particle system with perspective projection
-- 🧠 Fully CPU-based physics simulation — no GPU/WebGPU acceleration
-- ⚛️ Simulation of electrons, protons, and neutrons, each with realistic mass, charge, and radius
-- 💥 Collision detection and elastic response using spatial grid partitioning
-- ⚡ Electrostatic attraction/repulsion based on particle charges
-- 🧲 Strong nuclear force between protons and neutrons within a configurable range
-- 🌀 Electron shell constraint system to simulate atomic orbital stability
-- 🖱 Interactive mouse dragging to apply external forces
-- 🎛 UI controls for adjusting particle types, counts, world size, FOV, damping, and more
-- 📈 FPS counter with dynamic performance feedback
-- 🧩 Clean, modular codebase using React, TypeScript, and custom physics/vector classes
+- Next.js 16 App Router
+- React 19
+- TypeScript strict mode
+- Vitest
+- ESLint flat config
+- Native Canvas 2D API
 
-## 🧠 Physics Simulation Overview
-
-The `Physics` engine applies several key interaction models:
-
-### ✅ Collision Detection
-
-- Spatial hashing partitions particles into 3D grid cells for efficient lookup
-- Neighboring cells are checked for overlapping particles
-- Collisions apply position correction and velocity reflection for elastic response
-
-### ✅ Electrostatic Charge Forces
-
-- Oppositely charged particles attract; like charges repel
-- Force magnitude scales with inverse square of distance
-- Only charged particles (electrons, protons) participate
-
-### ✅ Electron Shell Constraints
-
-- Electrons are pulled toward stable orbital radii from the center
-- A spring-like force (`F = k * offset`) maintains approximate shell distance
-
-### ✅ Strong Nuclear Force
-
-- Applies short-range attraction between neutrons and protons
-- Scales linearly with proximity inside a nuclear force radius
-
----
-
-## 🧱 Tech Stack
-
-- React 18 with Next.js App Router
-- TypeScript
-- HTML Canvas 2D API
-- Modular custom classes (`Vector3`, `Particle`, `Physics`, `World`)
-- Context-based global simulation settings
-
----
-
-## 🛠 Getting Started
+## Scripts
 
 ```bash
-# Install dependencies
 npm install
-```
-
-### Start development server
-
-```bash
 npm run dev
+npm run test
+npm run lint
+npm run build
+npm run check
 ```
 
-Then open http://localhost:3000 in your browser.
+Open `http://localhost:3000`.
 
-## 🎮 Controls
+## Architecture
 
-Use the right sidebar to modify:
+- `src/app` owns routes, metadata, global CSS, and provider composition.
+- `src/features/simulation` owns the simulation feature.
+- `components` contains feature UI only: control panel and canvas host.
+- `screens` contains the feature screen composed by the route.
+- `hooks` owns browser lifecycle, event listeners, refs, and animation loop wiring.
+- `model` owns settings, particles, vectors, physics, world, mouse interaction, and frame-step logic.
+- `renderer` owns canvas draw helpers, FPS rendering, particle sorting, and draw grouping.
+- `src/theme` owns typed tokens, theme creation, provider, and CSS variable generation.
+- `src/i18n` owns typed English messages and message utility tests.
+- `src/lib` owns app metadata and site constants.
 
-Particle counts (electrons, protons, neutrons)
+## Physics Model
 
-World dimensions and zoom
+This is a CPU Canvas 3D toy simulation, not a real atomic simulator. It uses screen/world units, relative masses, and tuned constants. It does not model quantum orbitals, real SI units, radiation, spin, decay, or exact energy conservation.
 
-Center attraction, damping, nuclear and charge strength
+Physics runs on a fixed 60 Hz step. Each step clears acceleration, applies forces, integrates velocity/position, resolves boundaries, re-indexes the spatial grid, then resolves collisions.
 
-FOV and camera position
+Force model:
 
-Click and drag on the canvas to apply a directional force to nearby particles
+- Center attraction: mass-scaled pull toward the configured center, proportional to `strength / distance`.
+- Charge: softened Coulomb-like attraction/repulsion, `strength * q1 * q2 / (distance^2 + 1)`, with a short cutoff for CPU cost and stability.
+- Electron shell: spring constraint toward each electron shell radius. This is a visual shell, not a quantum orbital.
+- Strong nuclear: short-range nucleon attraction. Hard-core separation comes from collision resolution.
+- Local gravity: softened Newton-like attraction within `gravityRange`, scaled for proton/neutron masses.
+- Lennard-Jones: local 12-6 repulsion/attraction using `lennardJonesRadius` as the zero-crossing distance.
+- Collisions: mass-weighted positional correction plus impulse response with restitution. Lighter particles move more than heavy particles.
+- Boundaries: clamped box collision with restitution, so wall hits lose some energy.
 
-Watch the FPS counter (top-right) for performance feedback
+## Controls
 
-### 🧩 Architecture Notes
+The control panel adjusts world size, camera, center attraction, particle counts, and physics settings. Physics controls include damping, charge strength, gravity strength/range, and Lennard-Jones strength/radius. Mouse drag applies impulse to nearby particles. Arrow keys move the selection volume on the z-axis. `W` and `S` resize the selection volume.
 
-useCanvas() connects the render loop to the canvas and coordinates the physics engine
+## Quality Gates
 
-useSimulationSettings() manages all dynamic simulation values via React context
-
-Physics logic resides in the Physics class (spatial indexing, force resolution)
-
-Each Particle is rendered in 3D space and projected into 2D using a simple perspective transform
-
-This project is intended for educational and experimental purposes. No external physics libraries or WebGL/WebGPU are used — everything is computed and rendered with native browser APIs.
+`npm run check` runs lint, tests, and production build. Keep behavior changes covered by focused tests near the code they protect.

@@ -1,0 +1,55 @@
+.panel {
+  position: fixed;
+  top: var(--layout-control-panel-top);
+  left: var(--layout-control-panel-left);
+  z-index: var(--z-index-controls);
+  width: var(--layout-control-panel-width);
+  max-height: var(--layout-control-panel-max-height);
+  padding: var(--spacing-md);
+  overflow-y: auto;
+  color: var(--color-control-panel-text);
+  font-family: var(--typography-control-panel-font-family);
+  font-size: var(--typography-control-panel-font-size);
+  background: var(--color-control-panel-background);
+  border: 1px solid var(--color-control-panel-border);
+  border-radius: var(--radius-md);
+}
+
+.section {
+  margin-bottom: var(--spacing-sm);
+}
+
+.section:last-child {
+  margin-bottom: var(--spacing-none);
+}
+
+.summary {
+  margin-bottom: var(--spacing-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.slider {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+}
+
+.range {
+  width: 100%;
+  accent-color: var(--color-control-panel-focus);
+}
+
+.button {
+  margin-top: var(--spacing-xs);
+  color: var(--color-control-panel-text);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--color-control-panel-border);
+  border-radius: var(--radius-sm);
+}
+
+.button:focus-visible,
+.range:focus-visible {
+  outline: 2px solid var(--color-control-panel-focus);
+  outline-offset: 2px;
+}

@@ -1,15 +1,23 @@
-export const metadata = {
-  title: "Canvas Particles",
-};
+import type { ReactNode } from "react";
+import "./globals.css";
+import { AppProviders } from "@/app/providers";
+import { buildPageMetadata } from "@/lib/metadata";
+import { baseTheme } from "@/theme/theme";
+import { createCssVariables } from "@/theme/utils";
+
+export const metadata = buildPageMetadata();
+const themeVariables = createCssVariables(baseTheme);
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html data-theme={baseTheme.mode} lang="en" style={themeVariables}>
+      <body>
+        <AppProviders>{children}</AppProviders>
+      </body>
     </html>
   );
 }

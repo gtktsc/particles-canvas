@@ -1,0 +1,42 @@
+export const STEP_MS = 1000 / 60;
+export const MAX_STEPS_PER_FRAME = 5;
+
+export type FixedStepResult = {
+  accumulator: number;
+  lastTime: number;
+  steps: number;
+};
+
+export function getFixedStepCount({
+  accumulator,
+  lastTime,
+  maxSteps = MAX_STEPS_PER_FRAME,
+  now,
+  stepMs = STEP_MS,
+}: {
+  accumulator: number;
+  lastTime: number;
+  maxSteps?: number;
+  now: number;
+  stepMs?: number;
+}): FixedStepResult {
+  if (lastTime === 0) {
+    return { accumulator, lastTime: now, steps: 0 };
+  }
+
+  const delta = Math.max(0, now - lastTime);
+  let nextAccumulator = accumulator + delta;
+  const steps = Math.min(maxSteps, Math.floor(nextAccumulator / stepMs));
+
+  nextAccumulator -= steps * stepMs;
+
+  if (steps === maxSteps) {
+    nextAccumulator = Math.min(nextAccumulator, stepMs);
+  }
+
+  return {
+    accumulator: nextAccumulator,
+    lastTime: now,
+    steps,
+  };
+}

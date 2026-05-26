@@ -1,12 +1,12 @@
-import ParticleCanvas from "@/components/ParticleCanvas";
-import Controls from "@/components/Controls";
-import { SimulationSettingsProvider } from "@/context/SimulationSettingsContext";
+import {
+  SimulationScreen,
+  SimulationSettingsProvider,
+} from "@/features/simulation";
 
 export default function HomePage() {
   return (
     <SimulationSettingsProvider>
-      <Controls />
-      <ParticleCanvas />
+      <SimulationScreen />
     </SimulationSettingsProvider>
   );
 }
