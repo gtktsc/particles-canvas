@@ -68,6 +68,13 @@ export class Vector3 {
     return this.scale(1 / len);
   }
 
+  clampLength(max: number) {
+    const lenSq = this.lengthSq();
+    if (lenSq <= max * max) return this;
+
+    return this.scale(max / Math.sqrt(lenSq));
+  }
+
   toString() {
     return `${this.x.toFixed(2)},${this.y.toFixed(2)},${this.z.toFixed(2)}`;
   }

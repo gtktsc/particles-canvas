@@ -6,6 +6,11 @@ import {
   WORLD_WIDTH,
   WORLD_Z,
 } from "@/features/simulation/model/controlConfig";
+import type { ViewMode } from "@/features/simulation/model/SimulationSettingsContext";
+import {
+  createBoxDrawModel,
+} from "@/features/simulation/renderer/world";
+import { projectPoint } from "@/features/simulation/renderer/projection";
 import { baseTheme } from "@/theme/theme";
 
 export class Mouse3D {
@@ -131,31 +136,87 @@ export class Mouse3D {
     return null;
   }
 
-  render(ctx: CanvasRenderingContext2D, fov: number, camera: Vector3) {
+  render(
+    ctx: CanvasRenderingContext2D,
+    fov: number,
+    camera: Vector3,
+    viewMode: ViewMode = "front"
+  ) {
     const { width, height } = ctx.canvas;
     const box = new Box3D(
       this.position,
       new Vector3(this.size, this.size, this.size)
     );
-    const corners = box.getCorners();
-    Box3D.renderEdges(ctx, corners, fov, width, height, camera);
+    const model = createBoxDrawModel({
+      box,
+      camera,
+      canvasHeight: height,
+      canvasWidth: width,
+      fov,
+      viewMode,
+    });
+
+    if (model) {
+      for (const face of model.faces) {
+        ctx.beginPath();
+        ctx.moveTo(face.points[0].x, face.points[0].y);
+        for (const point of face.points.slice(1)) {
+          ctx.lineTo(point.x, point.y);
+        }
+        ctx.closePath();
+        ctx.fillStyle = this.draggedParticles.length > 0
+          ? "rgba(0, 255, 120, 0.08)"
+          : "rgba(0, 255, 120, 0.035)";
+        ctx.fill();
+      }
+
+      ctx.strokeStyle = baseTheme.color.selectionFrame;
+      ctx.lineWidth = 1.2;
+      for (const edge of model.edges) {
+        const a = model.projected[edge.a];
+        const b = model.projected[edge.b];
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+    }
 
     if (this.isDragging && this.dragStart) {
-      const project = (point: Vector3) => {
-        const relative = point.clone().sub(camera);
-        const scale = fov / (fov + relative.z);
+      const start = projectPoint({
+        camera,
+        canvasHeight: height,
+        canvasWidth: width,
+        fov,
+        point: this.dragStart,
+        viewMode,
+      });
+      const end = projectPoint({
+        camera,
+        canvasHeight: height,
+        canvasWidth: width,
+        fov,
+        point: this.position,
+        viewMode,
+      });
 
-        return {
-          x: width / 2 + relative.x * scale,
-          y: height / 2 + relative.y * scale,
-        };
-      };
-      const start = project(this.dragStart);
-      const end = project(this.position);
+      if (!start || !end) return;
+
+      const angle = Math.atan2(end.y - start.y, end.x - start.x);
+      const headLength = 8;
 
       ctx.beginPath();
       ctx.moveTo(start.x, start.y);
       ctx.lineTo(end.x, end.y);
+      ctx.lineTo(
+        end.x - headLength * Math.cos(angle - Math.PI / 7),
+        end.y - headLength * Math.sin(angle - Math.PI / 7)
+      );
+      ctx.moveTo(end.x, end.y);
+      ctx.lineTo(
+        end.x - headLength * Math.cos(angle + Math.PI / 7),
+        end.y - headLength * Math.sin(angle + Math.PI / 7)
+      );
       ctx.strokeStyle = baseTheme.color.dragVector;
       ctx.lineWidth = 2;
       ctx.stroke();

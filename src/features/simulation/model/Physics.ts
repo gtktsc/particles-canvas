@@ -1,16 +1,17 @@
-import { Particle } from "@/features/simulation/model/Particle";
+import { Particle, type ParticleType } from "@/features/simulation/model/Particle";
+import {
+  COLLISION_RESTITUTION,
+  DT_SECONDS,
+  LENNARD_JONES_MAX_FORCE,
+  MASS_REFERENCE,
+} from "@/features/simulation/model/physicsConstants";
 import { Vector3 } from "@/features/simulation/model/Vector3";
 import { SimulationSettings } from "@/features/simulation/model/SimulationSettingsContext";
 
 // Toy simulation units: one fixed step equals one 60 Hz tick, not one SI second.
-// Cutoffs keep CPU pair forces bounded and stable for interactive canvas use.
+// Cutoffs and softening keep CPU pair forces bounded for classroom interaction.
 const GRID_OFFSET = 512;
 const GRID_MASK = 0x3ff;
-const CHARGE_RANGE = 24;
-const MASS_REFERENCE = 1836;
-const LENNARD_JONES_CUTOFF_MULTIPLIER = 3;
-const LENNARD_JONES_MAX_FORCE = 50;
-const COLLISION_RESTITUTION = 0.85;
 
 type SimulationBounds = {
   depth: number;
@@ -37,16 +38,12 @@ export class Physics {
   step({
     bounds,
     center,
-    centerAttraction,
-    damping,
-    dtScale = 1,
+    dtSeconds = DT_SECONDS,
     particles,
   }: {
     bounds: SimulationBounds;
     center: Vector3;
-    centerAttraction: number;
-    damping: number;
-    dtScale?: number;
+    dtSeconds?: number;
     particles: Particle[];
   }) {
     for (const particle of particles) {
@@ -56,19 +53,30 @@ export class Physics {
     const cellSize = this.getInteractionCellSize(particles);
     this.index(particles, cellSize);
 
-    this.applyCenterAttraction(particles, center, centerAttraction);
+    this.applyCenterSpring(particles, center);
+    this.applyDrag(particles);
+    this.applyUniformField(particles);
+    this.applyElectricField(particles);
+    this.applyMagneticField(particles);
+    this.applyCentralGravity(particles, center);
+    this.applyPointChargeField(particles, center);
+    this.applyFluidDrag(particles);
+    this.applyBuoyancy(particles);
     this.resolveCharges();
     this.resolveElectronShells(particles, center);
     this.resolveStrongNuclearForce();
     this.resolveGravity();
     this.resolveLennardJones();
+    this.resolvePairSpring();
 
     for (const particle of particles) {
-      particle.integrate(dtScale, damping, bounds);
+      particle.integrate(dtSeconds, bounds);
     }
 
-    this.index(particles, cellSize);
-    this.resolveCollisions();
+    if (this.settings.collisionEnabled) {
+      this.index(particles, cellSize);
+      this.resolveCollisions();
+    }
   }
 
   index(particles: Particle[], cellSize: number) {
@@ -97,11 +105,12 @@ export class Physics {
     const maxRadius = Math.max(...particles.map((particle) => particle.radius));
     const sizes = [maxRadius * 2 * 1.2];
 
-    if (this.settings.chargeStrength > 0) sizes.push(CHARGE_RANGE);
-    if (this.settings.nuclearStrength > 0) sizes.push(this.settings.nuclearRange);
-    if (this.settings.gravityStrength > 0) sizes.push(this.settings.gravityRange);
-    if (this.settings.lennardJonesStrength > 0) {
-      sizes.push(this.settings.lennardJonesRadius * LENNARD_JONES_CUTOFF_MULTIPLIER);
+    if (this.settings.chargeEnabled) sizes.push(this.settings.chargeRange);
+    if (this.settings.nuclearEnabled) sizes.push(this.settings.nuclearRange);
+    if (this.settings.gravityEnabled) sizes.push(this.settings.gravityRange);
+    if (this.settings.pairSpringEnabled) sizes.push(this.settings.pairSpringRange);
+    if (this.settings.lennardJonesEnabled) {
+      sizes.push(this.settings.lennardJonesRange);
     }
 
     return Math.max(1, ...sizes);
@@ -151,25 +160,403 @@ export class Physics {
     }
   }
 
-  private applyCenterAttraction(
-    particles: Particle[],
-    center: Vector3,
-    centerAttraction: number
-  ) {
-    if (centerAttraction === 0) return;
+  private applyCenterSpring(particles: Particle[], center: Vector3) {
+    if (!this.settings.centerSpringEnabled || this.settings.centerSpringStrength <= 0) {
+      return;
+    }
 
     for (const particle of particles) {
-      const toCenter = Vector3.scratch1.copyFrom(center).sub(particle.position);
-      const dist = toCenter.length() + 0.01;
-      const force = toCenter
+      const displacement = Vector3.scratch1.copyFrom(center).sub(particle.position);
+      const distance = displacement.length();
+      const force = displacement
         .normalize()
-        .scale((centerAttraction / dist) * particle.mass);
+        .scale(distance * this.settings.centerSpringStrength * particle.mass);
 
       particle.applyForce(force);
     }
   }
 
+  sampleAccelerationAt(point: Vector3, testParticleType: ParticleType) {
+    const acceleration = new Vector3();
+    const { charge, mass } = this.getParticleProperties(testParticleType);
+
+    this.addCenterSpringAcceleration(acceleration, point);
+    this.addUniformFieldAcceleration(acceleration);
+    this.addElectricFieldAcceleration(acceleration, charge, mass);
+    this.addCentralGravityAcceleration(
+      acceleration,
+      point,
+      this.settings.forceCenterPoint
+    );
+    this.addPointChargeFieldAcceleration(
+      acceleration,
+      point,
+      this.settings.forceCenterPoint,
+      charge,
+      mass
+    );
+    this.addBuoyancyAcceleration(acceleration, point);
+
+    return acceleration;
+  }
+
+  samplePotentialAt(point: Vector3, testParticleType: ParticleType) {
+    const { charge, mass } = this.getParticleProperties(testParticleType);
+    let potential = 0;
+
+    if (this.settings.centerSpringEnabled && this.settings.centerSpringStrength > 0) {
+      const displacement = point.distanceTo(this.settings.forceCenterPoint);
+      potential +=
+        0.5 * mass * this.settings.centerSpringStrength * displacement * displacement;
+    }
+
+    if (
+      this.settings.centralGravityEnabled &&
+      this.settings.centralGravityStrength > 0
+    ) {
+      const softenedDistance = Math.sqrt(
+        point.distanceTo(this.settings.forceCenterPoint) ** 2 +
+          this.settings.centralGravitySoftening ** 2
+      );
+      potential -= (mass * this.settings.centralGravityStrength) / softenedDistance;
+    }
+
+    if (
+      this.settings.pointChargeFieldEnabled &&
+      this.settings.pointChargeStrength > 0 &&
+      charge !== 0
+    ) {
+      const softenedDistance = Math.sqrt(
+        point.distanceTo(this.settings.forceCenterPoint) ** 2 +
+          this.settings.pointChargeSoftening ** 2
+      );
+      potential +=
+        (this.settings.pointChargeStrength *
+          this.settings.pointChargeAmount *
+          charge) /
+        softenedDistance;
+    }
+
+    return Number.isFinite(potential) ? potential : 0;
+  }
+
+  estimatePotentialEnergy(particles: Particle[]) {
+    let potential = 0;
+
+    for (const particle of particles) {
+      potential += this.samplePotentialAt(particle.position, particle.type);
+    }
+
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const p1 = particles[i];
+        const p2 = particles[j];
+        const distSq = p1.position.distanceTo(p2.position) ** 2;
+
+        if (this.settings.lennardJonesEnabled) {
+          const rangeSq =
+            this.settings.lennardJonesRange * this.settings.lennardJonesRange;
+          if (distSq > 0 && distSq <= rangeSq) {
+            const dist = Math.max(
+              Math.sqrt(distSq),
+              this.settings.lennardJonesRadius * 0.35
+            );
+            const ratio = this.settings.lennardJonesRadius / dist;
+            const ratio6 = ratio ** 6;
+            potential +=
+              4 *
+              this.settings.lennardJonesStrength *
+              (ratio6 * ratio6 - ratio6);
+          }
+        }
+
+        if (this.settings.pairSpringEnabled) {
+          const rangeSq = this.settings.pairSpringRange * this.settings.pairSpringRange;
+          if (distSq > 0 && distSq <= rangeSq) {
+            const extension =
+              Math.sqrt(distSq) - this.settings.pairSpringRestLength;
+            potential +=
+              0.5 * this.settings.pairSpringStrength * extension * extension;
+          }
+        }
+      }
+    }
+
+    return Number.isFinite(potential) ? potential : 0;
+  }
+
+  private getParticleProperties(type: ParticleType) {
+    switch (type) {
+      case "electron":
+        return { charge: -1, mass: 1 };
+      case "proton":
+        return { charge: 1, mass: 1836 };
+      case "neutron":
+        return { charge: 0, mass: 1839 };
+    }
+  }
+
+  private addCenterSpringAcceleration(acceleration: Vector3, point: Vector3) {
+    if (!this.settings.centerSpringEnabled || this.settings.centerSpringStrength <= 0) {
+      return;
+    }
+
+    acceleration.add(
+      Vector3.scratch1
+        .copyFrom(this.settings.forceCenterPoint)
+        .sub(point)
+        .scale(this.settings.centerSpringStrength)
+    );
+  }
+
+  private addUniformFieldAcceleration(acceleration: Vector3) {
+    if (!this.settings.uniformFieldEnabled) return;
+
+    acceleration.add(
+      new Vector3(
+        this.settings.uniformFieldX,
+        this.settings.uniformFieldY,
+        this.settings.uniformFieldZ
+      )
+    );
+  }
+
+  private addElectricFieldAcceleration(
+    acceleration: Vector3,
+    charge: number,
+    mass: number
+  ) {
+    if (!this.settings.electricFieldEnabled || charge === 0) return;
+
+    acceleration.add(
+      new Vector3(
+        (this.settings.electricFieldX * charge) / mass,
+        (this.settings.electricFieldY * charge) / mass,
+        (this.settings.electricFieldZ * charge) / mass
+      )
+    );
+  }
+
+  private addCentralGravityAcceleration(
+    acceleration: Vector3,
+    point: Vector3,
+    center: Vector3
+  ) {
+    if (
+      !this.settings.centralGravityEnabled ||
+      this.settings.centralGravityStrength <= 0
+    ) {
+      return;
+    }
+
+    const towardCenter = Vector3.scratch1.copyFrom(center).sub(point);
+    const distSq = towardCenter.lengthSq();
+    const softeningSq =
+      this.settings.centralGravitySoftening *
+      this.settings.centralGravitySoftening;
+    const denom = (distSq + softeningSq) ** 1.5 || 1;
+
+    acceleration.add(
+      towardCenter.scale(this.settings.centralGravityStrength / denom)
+    );
+  }
+
+  private addPointChargeFieldAcceleration(
+    acceleration: Vector3,
+    point: Vector3,
+    center: Vector3,
+    charge: number,
+    mass: number
+  ) {
+    if (
+      !this.settings.pointChargeFieldEnabled ||
+      this.settings.pointChargeStrength <= 0 ||
+      charge === 0
+    ) {
+      return;
+    }
+
+    const fromCenter = point.clone().sub(center);
+    const distSq = fromCenter.lengthSq();
+    const softeningSq =
+      this.settings.pointChargeSoftening * this.settings.pointChargeSoftening;
+    const denom = (distSq + softeningSq) ** 1.5 || 1;
+
+    acceleration.add(
+      fromCenter.scale(
+        (this.settings.pointChargeStrength *
+          this.settings.pointChargeAmount *
+          charge) /
+          (mass * denom)
+      )
+    );
+  }
+
+  private addBuoyancyAcceleration(acceleration: Vector3, point: Vector3) {
+    if (
+      !this.settings.buoyancyEnabled ||
+      this.settings.buoyancyDensity <= 0 ||
+      this.settings.buoyancyStrength <= 0 ||
+      point.y < this.settings.fluidSurfaceY
+    ) {
+      return;
+    }
+
+    acceleration.y -= this.settings.buoyancyDensity * this.settings.buoyancyStrength;
+  }
+
+  private applyDrag(particles: Particle[]) {
+    if (!this.settings.dragEnabled || this.settings.dragStrength <= 0) return;
+
+    for (const particle of particles) {
+      const force = Vector3.scratch1
+        .copyFrom(particle.velocity)
+        .scale(-this.settings.dragStrength * particle.mass);
+
+      particle.applyForce(force);
+    }
+  }
+
+  private applyUniformField(particles: Particle[]) {
+    if (!this.settings.uniformFieldEnabled) return;
+
+    for (const particle of particles) {
+      particle.applyForce(
+        new Vector3(
+          this.settings.uniformFieldX * particle.mass,
+          this.settings.uniformFieldY * particle.mass,
+          this.settings.uniformFieldZ * particle.mass
+        )
+      );
+    }
+  }
+
+  private applyElectricField(particles: Particle[]) {
+    if (!this.settings.electricFieldEnabled) return;
+
+    for (const particle of particles) {
+      if (particle.charge === 0) continue;
+
+      particle.applyForce(
+        new Vector3(
+          this.settings.electricFieldX * particle.charge,
+          this.settings.electricFieldY * particle.charge,
+          this.settings.electricFieldZ * particle.charge
+        )
+      );
+    }
+  }
+
+  private applyMagneticField(particles: Particle[]) {
+    if (!this.settings.magneticFieldEnabled || this.settings.magneticFieldZ === 0) {
+      return;
+    }
+
+    const bz = this.settings.magneticFieldZ;
+
+    for (const particle of particles) {
+      if (particle.charge === 0) continue;
+
+      particle.applyForce(
+        new Vector3(
+          particle.velocity.y * bz * particle.charge,
+          -particle.velocity.x * bz * particle.charge,
+          0
+        )
+      );
+    }
+  }
+
+  private applyCentralGravity(particles: Particle[], center: Vector3) {
+    if (
+      !this.settings.centralGravityEnabled ||
+      this.settings.centralGravityStrength <= 0
+    ) {
+      return;
+    }
+
+    for (const particle of particles) {
+      const acceleration = new Vector3();
+      this.addCentralGravityAcceleration(acceleration, particle.position, center);
+      particle.applyForce(acceleration.scale(particle.mass));
+    }
+  }
+
+  private applyPointChargeField(particles: Particle[], center: Vector3) {
+    if (
+      !this.settings.pointChargeFieldEnabled ||
+      this.settings.pointChargeStrength <= 0
+    ) {
+      return;
+    }
+
+    for (const particle of particles) {
+      if (particle.charge === 0) continue;
+
+      const acceleration = new Vector3();
+      this.addPointChargeFieldAcceleration(
+        acceleration,
+        particle.position,
+        center,
+        particle.charge,
+        particle.mass
+      );
+      particle.applyForce(acceleration.scale(particle.mass));
+    }
+  }
+
+  private applyFluidDrag(particles: Particle[]) {
+    if (
+      !this.settings.fluidDragEnabled ||
+      (this.settings.fluidDragLinear <= 0 && this.settings.fluidDragQuadratic <= 0)
+    ) {
+      return;
+    }
+
+    const mediumVelocity = new Vector3(
+      this.settings.mediumVelocityX,
+      this.settings.mediumVelocityY,
+      this.settings.mediumVelocityZ
+    );
+
+    for (const particle of particles) {
+      const relativeVelocity = particle.velocity.clone().sub(mediumVelocity);
+      const speed = relativeVelocity.length();
+      if (speed === 0) continue;
+
+      const acceleration = relativeVelocity.scale(
+        -(this.settings.fluidDragLinear +
+          this.settings.fluidDragQuadratic * speed)
+      );
+      particle.applyForce(acceleration.scale(particle.mass));
+    }
+  }
+
+  private applyBuoyancy(particles: Particle[]) {
+    if (
+      !this.settings.buoyancyEnabled ||
+      this.settings.buoyancyDensity <= 0 ||
+      this.settings.buoyancyStrength <= 0
+    ) {
+      return;
+    }
+
+    for (const particle of particles) {
+      if (particle.position.y < this.settings.fluidSurfaceY) continue;
+
+      const volumeScale = Math.max(0.25, particle.radius / 3);
+      const acceleration =
+        this.settings.buoyancyDensity *
+        this.settings.buoyancyStrength *
+        volumeScale;
+
+      particle.applyForce(new Vector3(0, -particle.mass * acceleration, 0));
+    }
+  }
+
   resolveCollisions() {
+    if (!this.settings.collisionEnabled) return;
+
     this.forEachNeighborPair((p1, p2, delta) => {
       const minDist = p1.radius + p2.radius;
       const dx = Math.abs(delta.x);
@@ -220,16 +607,18 @@ export class Physics {
   }
 
   resolveCharges() {
-    if (this.settings.chargeStrength <= 0) return;
-    const chargeRangeSq = CHARGE_RANGE * CHARGE_RANGE;
+    if (!this.settings.chargeEnabled || this.settings.chargeStrength <= 0) return;
+
+    const rangeSq = this.settings.chargeRange * this.settings.chargeRange;
+    const softeningSq = this.settings.chargeSoftening * this.settings.chargeSoftening;
 
     this.forEachNeighborPair((p1, p2, delta, distSq) => {
-      if (p1.charge === 0 || p2.charge === 0 || distSq > chargeRangeSq) return;
+      if (p1.charge === 0 || p2.charge === 0 || distSq > rangeSq) return;
 
-      const softenedDistSq = distSq + 1;
       const chargeProduct = p1.charge * p2.charge;
       const forceMagnitude =
-        (this.settings.chargeStrength * Math.abs(chargeProduct)) / softenedDistSq;
+        (this.settings.chargeStrength * Math.abs(chargeProduct)) /
+        (distSq + softeningSq);
       const force = delta
         .normalize()
         .scale(chargeProduct < 0 ? forceMagnitude : -forceMagnitude);
@@ -242,7 +631,7 @@ export class Physics {
   resolveStrongNuclearForce() {
     const range = this.settings.nuclearRange;
     const strength = this.settings.nuclearStrength;
-    if (range <= 0 || strength <= 0) return;
+    if (!this.settings.nuclearEnabled || range <= 0 || strength <= 0) return;
 
     const rangeSq = range * range;
 
@@ -254,7 +643,7 @@ export class Physics {
       const dist = Math.sqrt(distSq);
       const force = delta
         .normalize()
-        .scale((1 - dist / range) * strength);
+        .scale((1 - dist / range) * strength * MASS_REFERENCE);
 
       p1.applyForce(force);
       p2.applyForce(Vector3.scratch2.copyFrom(force).scale(-1));
@@ -263,7 +652,7 @@ export class Physics {
 
   resolveElectronShells(particles: Particle[], center: Vector3) {
     const k = this.settings.shellConstraintK;
-    if (k === 0) return;
+    if (!this.settings.shellEnabled || k <= 0) return;
 
     for (const p of particles) {
       if (p.type !== "electron") continue;
@@ -281,15 +670,17 @@ export class Physics {
   resolveGravity() {
     const range = this.settings.gravityRange;
     const strength = this.settings.gravityStrength;
-    if (range <= 0 || strength <= 0) return;
+    if (!this.settings.gravityEnabled || range <= 0 || strength <= 0) return;
 
     const rangeSq = range * range;
+    const softeningSq =
+      this.settings.gravitySoftening * this.settings.gravitySoftening;
 
     this.forEachNeighborPair((p1, p2, delta, distSq) => {
       if (distSq === 0 || distSq > rangeSq) return;
 
       const forceMagnitude =
-        (strength * p1.mass * p2.mass) / (MASS_REFERENCE * (distSq + 25));
+        (strength * p1.mass * p2.mass) / (MASS_REFERENCE * (distSq + softeningSq));
       const force = delta.normalize().scale(forceMagnitude);
 
       p1.applyForce(force);
@@ -298,29 +689,59 @@ export class Physics {
   }
 
   resolveLennardJones() {
-    const radius = this.settings.lennardJonesRadius;
-    const strength = this.settings.lennardJonesStrength;
-    if (radius <= 0 || strength <= 0) return;
+    const sigma = this.settings.lennardJonesRadius;
+    const epsilon = this.settings.lennardJonesStrength;
+    if (!this.settings.lennardJonesEnabled || sigma <= 0 || epsilon <= 0) return;
 
-    const cutoff = radius * LENNARD_JONES_CUTOFF_MULTIPLIER;
-    const cutoffSq = cutoff * cutoff;
-    const minDist = radius * 0.35;
+    const rangeSq = this.settings.lennardJonesRange * this.settings.lennardJonesRange;
+    const minDist = sigma * 0.35;
 
     this.forEachNeighborPair((p1, p2, delta, distSq) => {
-      if (distSq === 0 || distSq > cutoffSq) return;
+      if (distSq === 0 || distSq > rangeSq) return;
 
       const dist = Math.max(Math.sqrt(distSq), minDist);
-      const ratio = radius / dist;
+      const ratio = sigma / dist;
       const ratio6 = ratio ** 6;
-      const unclampedForce = strength * (ratio6 * ratio6 - ratio6);
       const forceMagnitude = Math.max(
         -LENNARD_JONES_MAX_FORCE,
-        Math.min(LENNARD_JONES_MAX_FORCE, unclampedForce)
+        Math.min(
+          LENNARD_JONES_MAX_FORCE,
+          (24 * epsilon * (2 * ratio6 * ratio6 - ratio6)) / dist
+        )
       );
 
       if (forceMagnitude === 0) return;
 
       const force = delta.normalize().scale(-forceMagnitude);
+
+      p1.applyForce(force);
+      p2.applyForce(Vector3.scratch2.copyFrom(force).scale(-1));
+    });
+  }
+
+  resolvePairSpring() {
+    if (
+      !this.settings.pairSpringEnabled ||
+      (this.settings.pairSpringStrength <= 0 &&
+        this.settings.pairSpringDamping <= 0) ||
+      this.settings.pairSpringRange <= 0
+    ) {
+      return;
+    }
+
+    const rangeSq = this.settings.pairSpringRange * this.settings.pairSpringRange;
+
+    this.forEachNeighborPair((p1, p2, delta, distSq) => {
+      if (distSq === 0 || distSq > rangeSq) return;
+
+      const dist = Math.sqrt(distSq);
+      const normal = delta.normalize();
+      const relVelAlongSpring = p2.velocity.clone().sub(p1.velocity).dot(normal);
+      const forceMagnitude =
+        this.settings.pairSpringStrength *
+          (dist - this.settings.pairSpringRestLength) +
+        this.settings.pairSpringDamping * relVelAlongSpring;
+      const force = normal.scale(forceMagnitude);
 
       p1.applyForce(force);
       p2.applyForce(Vector3.scratch2.copyFrom(force).scale(-1));

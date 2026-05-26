@@ -19,9 +19,9 @@ export const getInitialPosition = (
 
 export const getInitialVelocity = () => {
   return {
-    x: (Math.random() - 0.5) * 3,
-    y: (Math.random() - 0.5) * 3,
-    z: (Math.random() - 0.5) * 3,
+    x: (Math.random() - 0.5) * 90,
+    y: (Math.random() - 0.5) * 90,
+    z: (Math.random() - 0.5) * 90,
   };
 };
 

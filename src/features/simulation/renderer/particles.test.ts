@@ -39,7 +39,9 @@ describe("particle renderer", () => {
         width: 100,
       })
     ).toEqual({
-      "rgba(255, 0, 0, 1)": [{ px: 50, py: 50, radius: 1.5 }],
+      "rgba(255, 0, 0, 1)": [
+        { collided: false, px: 50, py: 50, radius: 2, scale: 0.5 },
+      ],
     });
   });
 });

@@ -1,4 +1,6 @@
-export const STEP_MS = 1000 / 60;
+import { DT_SECONDS } from "@/features/simulation/model/physicsConstants";
+
+export const STEP_MS = DT_SECONDS * 1000;
 export const MAX_STEPS_PER_FRAME = 5;
 
 export type FixedStepResult = {

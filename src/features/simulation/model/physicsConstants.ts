@@ -1,0 +1,18 @@
+export const DT_SECONDS = 1 / 60;
+export const MAX_SPEED = 260;
+export const MAX_ACCELERATION = 900;
+
+export const BOUNDARY_RESTITUTION = 0.85;
+export const COLLISION_RESTITUTION = 0.85;
+
+export const MASS_REFERENCE = 1836;
+
+export const DEFAULT_CHARGE_SOFTENING = 18;
+export const DEFAULT_CHARGE_RANGE = 260;
+export const DEFAULT_GRAVITY_SOFTENING = 24;
+export const DEFAULT_GRAVITY_RANGE = 260;
+export const DEFAULT_LENNARD_JONES_RADIUS = 18;
+export const DEFAULT_LENNARD_JONES_RANGE = 54;
+export const DEFAULT_NUCLEAR_RANGE = 18;
+
+export const LENNARD_JONES_MAX_FORCE = 120_000;

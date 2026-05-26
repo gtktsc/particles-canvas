@@ -3,10 +3,13 @@ import {
   getInitialVelocity,
   getShellIndex,
 } from "@/features/simulation/model/defaults";
+import {
+  BOUNDARY_RESTITUTION,
+  MAX_ACCELERATION,
+  MAX_SPEED,
+} from "@/features/simulation/model/physicsConstants";
 import { Vector3 } from "@/features/simulation/model/Vector3";
 import { baseTheme } from "@/theme/theme";
-
-export const BOUNDARY_RESTITUTION = 0.85;
 
 let particleIdCounter = 0;
 export type Charge = -1 | 0 | 1;
@@ -19,6 +22,7 @@ export class Particle {
   position: Vector3;
   velocity: Vector3;
   acceleration: Vector3;
+  lastAcceleration: Vector3;
   radius: number;
   charge: Charge;
   mass: number;
@@ -67,6 +71,7 @@ export class Particle {
     const { x: vx, y: vy, z: vz } = getInitialVelocity();
     this.velocity = new Vector3(vx, vy, vz);
     this.acceleration = new Vector3();
+    this.lastAcceleration = new Vector3();
   }
 
   applyForce(force: Vector3) {
@@ -88,19 +93,20 @@ export class Particle {
   }
 
   integrate(
-    dtScale: number,
-    damping: number,
+    dtSeconds: number,
     bounds: { width: number; height: number; depth: number },
   ) {
-    this.velocity.x += this.acceleration.x * dtScale;
-    this.velocity.y += this.acceleration.y * dtScale;
-    this.velocity.z += this.acceleration.z * dtScale;
+    this.acceleration.clampLength(MAX_ACCELERATION);
+    this.lastAcceleration.copyFrom(this.acceleration);
 
-    this.position.x += this.velocity.x * dtScale;
-    this.position.y += this.velocity.y * dtScale;
-    this.position.z += this.velocity.z * dtScale;
+    this.velocity.x += this.acceleration.x * dtSeconds;
+    this.velocity.y += this.acceleration.y * dtSeconds;
+    this.velocity.z += this.acceleration.z * dtSeconds;
+    this.velocity.clampLength(MAX_SPEED);
 
-    this.velocity.scale(Math.pow(damping, dtScale));
+    this.position.x += this.velocity.x * dtSeconds;
+    this.position.y += this.velocity.y * dtSeconds;
+    this.position.z += this.velocity.z * dtSeconds;
 
     const halfX = bounds.width / 2;
     const halfY = bounds.height / 2;
