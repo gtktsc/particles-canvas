@@ -9,7 +9,6 @@ import { StatsPanel } from "@/features/simulation/components/StatsPanel";
 import {
   createDefaultSettings,
   type ExampleLayoutId,
-  type SimulationSettings,
   type ViewMode,
   useSimulationSettings,
   useSimulationStats,
@@ -22,19 +21,29 @@ import {
   type VectorControl,
   type VectorSettingKey,
 } from "@/features/simulation/model/controlConfig";
+import { FORCE_DEFINITIONS } from "@/features/simulation/model/forceDefinitions";
 import {
   createAllForcesDefaultPatch,
   createAllForcesDisabledPatch,
   createForceDefaultPatch,
-  FORCE_DEFINITIONS,
+} from "@/features/simulation/model/forcePatches";
+import {
   FORCE_PRESETS,
-  type ForceCategory,
-  type ForceDefinition,
-} from "@/features/simulation/model/forceDefinitions";
+  type ForcePreset,
+} from "@/features/simulation/model/forcePresets";
+import type {
+  ForceCategory,
+  ForceDefinition,
+  ForceScalarSettingKey,
+} from "@/features/simulation/model/forceTypes";
 import type { ParticleType } from "@/features/simulation/model/Particle";
 import {
+  createBooleanSettingPatch,
+  createForceScalarSettingPatch,
+  createNumberSettingPatch,
   createScalarSettingPatch,
   createVectorSettingPatch,
+  type BooleanSettingKey,
 } from "@/features/simulation/model/settingsPatch";
 import { useMessages } from "@/i18n/MessagesProvider";
 import styles from "@/features/simulation/components/ControlPanel.module.css";
@@ -42,34 +51,47 @@ import styles from "@/features/simulation/components/ControlPanel.module.css";
 type SliderConfig = ScalarControl | VectorControl;
 
 const FORCE_GROUPS = [
-  { id: "fields", title: "Fields" },
-  { id: "pairForces", title: "Pair Forces" },
-  { id: "constraints", title: "Constraints" },
-  { id: "contacts", title: "Contacts" },
-] as const satisfies readonly { id: ForceCategory; title: string }[];
+  { id: "fields" },
+  { id: "pairForces" },
+  { id: "constraints" },
+  { id: "contacts" },
+] as const satisfies readonly { id: ForceCategory }[];
 
 const VIEW_MODES = [
-  { id: "front", label: "Front" },
-  { id: "top", label: "Top" },
-  { id: "side", label: "Side" },
-  { id: "iso", label: "Iso" },
-] as const satisfies readonly { id: ViewMode; label: string }[];
+  { id: "front" },
+  { id: "top" },
+  { id: "side" },
+  { id: "iso" },
+] as const satisfies readonly { id: ViewMode }[];
 
 const INITIAL_LAYOUTS = [
-  { id: "random", label: "Random" },
-  { id: "beam", label: "Beam" },
-  { id: "ringOrbit", label: "Orbit Ring" },
-  { id: "twoBody", label: "Two Body" },
-  { id: "springLine", label: "Spring Line" },
-  { id: "gasBox", label: "Gas Box" },
-  { id: "fallingColumn", label: "Falling Column" },
-] as const satisfies readonly { id: ExampleLayoutId; label: string }[];
+  { id: "random" },
+  { id: "beam" },
+  { id: "ringOrbit" },
+  { id: "twoBody" },
+  { id: "springLine" },
+  { id: "gasBox" },
+  { id: "fallingColumn" },
+] as const satisfies readonly { id: ExampleLayoutId }[];
 
 const PROBE_TYPES = [
-  { id: "proton", label: "Positive" },
-  { id: "electron", label: "Negative" },
-  { id: "neutron", label: "Neutral" },
-] as const satisfies readonly { id: ParticleType; label: string }[];
+  { id: "proton" },
+  { id: "electron" },
+  { id: "neutron" },
+] as const satisfies readonly { id: ParticleType }[];
+
+type OverlaySettingKey =
+  | "showAxes"
+  | "showGrid"
+  | "showFieldVectors"
+  | "showPotentialHeatmap"
+  | "showVelocityVectors"
+  | "showForceVectors"
+  | "showParticleLabels"
+  | "showTrails"
+  | "showDepthShading"
+  | "showGraphs"
+  | "probeEnabled";
 
 export function ControlPanel() {
   const [settings, setSettings] = useSimulationSettings();
@@ -77,20 +99,25 @@ export function ControlPanel() {
   const { messages } = useMessages();
   const defaults = createDefaultSettings();
   const controls = messages.simulation.controls;
+  const forceLab = messages.simulation.forceLab;
 
   const setScalarSetting = (key: ScalarControl["key"], value: number) => {
     setSettings(createScalarSettingPatch(key, value));
   };
 
   const setForceScalarSetting = (
-    key: keyof SimulationSettings,
+    key: ForceScalarSettingKey,
     value: number
   ) => {
-    setSettings({ [key]: value } as Partial<SimulationSettings>);
+    setSettings(createForceScalarSettingPatch(key, value));
   };
 
-  const setBooleanSetting = (key: keyof SimulationSettings, value: boolean) => {
-    setSettings({ [key]: value } as Partial<SimulationSettings>);
+  const setNumberSetting = (key: "trailLength", value: number) => {
+    setSettings(createNumberSettingPatch(key, value));
+  };
+
+  const setBooleanSetting = (key: BooleanSettingKey, value: boolean) => {
+    setSettings(createBooleanSettingPatch(key, value));
   };
 
   const setVectorSetting = (
@@ -126,7 +153,7 @@ export function ControlPanel() {
     />
   );
 
-  const applyPreset = (preset: (typeof FORCE_PRESETS)[number]) => {
+  const applyPreset = (preset: ForcePreset) => {
     setSettings({
       ...createAllForcesDisabledPatch(),
       ...preset.settings,
@@ -157,31 +184,31 @@ export function ControlPanel() {
     setSettings({ cameraPosition, viewMode });
   };
 
-  const renderToggle = (
-    key: keyof SimulationSettings,
-    label: string
-  ) => (
+  const renderToggle = (key: OverlaySettingKey) => (
     <label className={styles.toggle} key={String(key)}>
       <input
-        checked={Boolean(settings[key])}
+        checked={settings[key]}
         onChange={(event) => setBooleanSetting(key, event.target.checked)}
         type="checkbox"
       />
-      <span>{label}</span>
+      <span>{forceLab.overlays[key]}</span>
     </label>
   );
 
   const activeExample =
     FORCE_PRESETS.find((preset) => preset.id === settings.activeExampleId) ??
     FORCE_PRESETS[0];
+  const activeExampleCopy = forceLab.examples[activeExample.id];
   const activeForceIds = new Set<string>(activeExample.activeForces);
   const activeForceTitles = activeExample.activeForces
-    .map((forceId) => FORCE_DEFINITIONS.find((force) => force.id === forceId)?.title)
+    .map((forceId) => forceLab.forces[forceId].title)
     .filter(Boolean)
     .join(", ");
   const suggestedSliders = FORCE_DEFINITIONS
     .filter((force) => activeForceIds.has(force.id))
-    .flatMap((force) => force.sliders.map((slider) => slider.label))
+    .flatMap((force) =>
+      force.sliders.map((slider) => forceLab.sliderLabels[slider.key])
+    )
     .slice(0, 5)
     .join(", ");
 
@@ -189,18 +216,18 @@ export function ControlPanel() {
     <div className={styles.panel}>
       <header className={styles.panelHeader}>
         <div>
-          <h1 className={styles.title}>Forces Lab</h1>
-          <p className={styles.subtitle}>Toy units. Real force patterns.</p>
+          <h1 className={styles.title}>{forceLab.title}</h1>
+          <p className={styles.subtitle}>{forceLab.subtitle}</p>
         </div>
         <PanelButton
-          label={settings.isPaused ? "Resume" : "Pause"}
+          label={settings.isPaused ? forceLab.actions.resume : forceLab.actions.pause}
           onClick={() => setBooleanSetting("isPaused", !settings.isPaused)}
         />
       </header>
 
       <div className={styles.toolbar}>
         <PanelButton
-          label="Step"
+          label={forceLab.actions.step}
           onClick={() =>
             setSettings({
               isPaused: true,
@@ -209,13 +236,13 @@ export function ControlPanel() {
           }
         />
         <PanelButton
-          label="Reset Simulation"
+          label={forceLab.actions.resetSimulation}
           onClick={() => setSettings({ resetSignal: settings.resetSignal + 1 })}
         />
-        <PanelButton label="Reset Forces" onClick={resetForces} />
+        <PanelButton label={forceLab.actions.resetForces} onClick={resetForces} />
       </div>
 
-      <div className={styles.viewControls} aria-label="View controls">
+      <div className={styles.viewControls} aria-label={forceLab.aria.viewControls}>
         {VIEW_MODES.map((view) => (
           <button
             className={`${styles.viewButton} ${
@@ -225,7 +252,7 @@ export function ControlPanel() {
             onClick={() => setViewMode(view.id)}
             type="button"
           >
-            {view.label}
+            {forceLab.viewModes[view.id]}
           </button>
         ))}
         <button
@@ -240,27 +267,27 @@ export function ControlPanel() {
           }
           type="button"
         >
-          Reset View
+          {forceLab.actions.resetView}
         </button>
       </div>
 
       <div className={styles.overlayControls}>
-        {renderToggle("showAxes", "Axes")}
-        {renderToggle("showGrid", "Grid")}
-        {renderToggle("showFieldVectors", "Field")}
-        {renderToggle("showPotentialHeatmap", "Potential")}
-        {renderToggle("showVelocityVectors", "Velocity")}
-        {renderToggle("showForceVectors", "Force")}
-        {renderToggle("showParticleLabels", "Labels")}
-        {renderToggle("showTrails", "Trails")}
-        {renderToggle("showDepthShading", "Depth")}
-        {renderToggle("showGraphs", "Graphs")}
-        {renderToggle("probeEnabled", "Probe")}
+        {renderToggle("showAxes")}
+        {renderToggle("showGrid")}
+        {renderToggle("showFieldVectors")}
+        {renderToggle("showPotentialHeatmap")}
+        {renderToggle("showVelocityVectors")}
+        {renderToggle("showForceVectors")}
+        {renderToggle("showParticleLabels")}
+        {renderToggle("showTrails")}
+        {renderToggle("showDepthShading")}
+        {renderToggle("showGraphs")}
+        {renderToggle("probeEnabled")}
       </div>
 
       <div className={styles.selectGrid}>
         <label className={styles.selectLabel}>
-          <span>Initial layout</span>
+          <span>{forceLab.selects.initialLayout}</span>
           <select
             className={styles.select}
             onChange={(event) =>
@@ -273,13 +300,13 @@ export function ControlPanel() {
           >
             {INITIAL_LAYOUTS.map((layout) => (
               <option key={layout.id} value={layout.id}>
-                {layout.label}
+                {forceLab.initialLayouts[layout.id]}
               </option>
             ))}
           </select>
         </label>
         <label className={styles.selectLabel}>
-          <span>Probe type</span>
+          <span>{forceLab.selects.probeType}</span>
           <select
             className={styles.select}
             disabled={!settings.probeEnabled}
@@ -290,7 +317,7 @@ export function ControlPanel() {
           >
             {PROBE_TYPES.map((type) => (
               <option key={type.id} value={type.id}>
-                {type.label}
+                {forceLab.probeTypes[type.id]}
               </option>
             ))}
           </select>
@@ -300,8 +327,8 @@ export function ControlPanel() {
       <SliderControl
         config={{ min: 0, max: 180, step: 5 }}
         disabled={!settings.showTrails}
-        label="Trail length"
-        onChange={(value) => setForceScalarSetting("trailLength", value)}
+        label={forceLab.fields.trailLength}
+        onChange={(value) => setNumberSetting("trailLength", value)}
         value={settings.trailLength}
       />
 
@@ -311,37 +338,46 @@ export function ControlPanel() {
         <MeasurementsPanel settings={settings} stats={stats} />
       ) : null}
 
-      <section className={styles.examplePanel} aria-label="Current example">
-        <h2 className={styles.groupTitle}>{activeExample.title}</h2>
-        <div className={styles.formula}>{activeExample.formula}</div>
-        <p className={styles.description}>{activeExample.whatToNotice}</p>
+      <section
+        className={styles.examplePanel}
+        aria-label={forceLab.aria.currentExample}
+      >
+        <h2 className={styles.groupTitle}>{activeExampleCopy.title}</h2>
+        <div className={styles.formula}>{activeExampleCopy.formula}</div>
+        <p className={styles.description}>{activeExampleCopy.whatToNotice}</p>
         <dl className={styles.exampleMeta}>
           <div>
-            <dt>Active</dt>
-            <dd>{activeForceTitles || "None"}</dd>
+            <dt>{forceLab.currentExample.active}</dt>
+            <dd>{activeForceTitles || forceLab.currentExample.none}</dd>
           </div>
           <div>
-            <dt>Try</dt>
-            <dd>{suggestedSliders || "Initial velocity, particle count"}</dd>
+            <dt>{forceLab.currentExample.try}</dt>
+            <dd>
+              {suggestedSliders || forceLab.currentExample.fallbackSliders}
+            </dd>
           </div>
         </dl>
       </section>
 
-      <section className={styles.examples} aria-label="Examples">
-        {FORCE_PRESETS.map((preset) => (
-          <button
-            className={`${styles.exampleButton} ${
-              settings.activeExampleId === preset.id ? styles.activeExample : ""
-            }`}
-            key={preset.id}
-            onClick={() => applyPreset(preset)}
-            type="button"
-          >
-            <strong>{preset.title}</strong>
-            <span>{preset.description}</span>
-            <em>{preset.whatToNotice}</em>
-          </button>
-        ))}
+      <section className={styles.examples} aria-label={forceLab.aria.examples}>
+        {FORCE_PRESETS.map((preset) => {
+          const presetCopy = forceLab.examples[preset.id];
+
+          return (
+            <button
+              className={`${styles.exampleButton} ${
+                settings.activeExampleId === preset.id ? styles.activeExample : ""
+              }`}
+              key={preset.id}
+              onClick={() => applyPreset(preset)}
+              type="button"
+            >
+              <strong>{presetCopy.title}</strong>
+              <span>{presetCopy.description}</span>
+              <em>{presetCopy.whatToNotice}</em>
+            </button>
+          );
+        })}
       </section>
 
       <ControlSection
@@ -396,10 +432,12 @@ export function ControlPanel() {
         {CONTROL_CONFIG.particles.map(renderSlider)}
       </ControlSection>
 
-      <section className={styles.forceList} aria-label="Forces">
+      <section className={styles.forceList} aria-label={forceLab.aria.forces}>
         {FORCE_GROUPS.map((group) => (
           <div className={styles.forceGroup} key={group.id}>
-            <h2 className={styles.groupTitle}>{group.title}</h2>
+            <h2 className={styles.groupTitle}>
+              {forceLab.forceGroups[group.id]}
+            </h2>
             {FORCE_DEFINITIONS.filter((force) => force.category === group.id).map(
               (force) => (
                 <ForceCard

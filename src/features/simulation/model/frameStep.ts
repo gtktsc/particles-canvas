@@ -42,3 +42,27 @@ export function getFixedStepCount({
     steps,
   };
 }
+
+export function getPhysicsFrameSteps({
+  accumulator,
+  isPaused,
+  lastTime,
+  now,
+  singleStepRequested,
+}: {
+  accumulator: number;
+  isPaused: boolean;
+  lastTime: number;
+  now: number;
+  singleStepRequested: boolean;
+}): FixedStepResult {
+  if (isPaused) {
+    return {
+      accumulator: 0,
+      lastTime: now,
+      steps: singleStepRequested ? 1 : 0,
+    };
+  }
+
+  return getFixedStepCount({ accumulator, lastTime, now });
+}

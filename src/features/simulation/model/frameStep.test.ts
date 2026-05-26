@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getFixedStepCount,
+  getPhysicsFrameSteps,
   MAX_STEPS_PER_FRAME,
   STEP_MS,
 } from "@/features/simulation/model/frameStep";
@@ -27,5 +28,27 @@ describe("frame step", () => {
 
     expect(result.steps).toBe(MAX_STEPS_PER_FRAME);
     expect(result.accumulator).toBeLessThanOrEqual(STEP_MS);
+  });
+
+  it("resets timing while paused and runs only requested single steps", () => {
+    expect(
+      getPhysicsFrameSteps({
+        accumulator: 20,
+        isPaused: true,
+        lastTime: 1000,
+        now: 1100,
+        singleStepRequested: false,
+      })
+    ).toEqual({ accumulator: 0, lastTime: 1100, steps: 0 });
+
+    expect(
+      getPhysicsFrameSteps({
+        accumulator: 20,
+        isPaused: true,
+        lastTime: 1000,
+        now: 1100,
+        singleStepRequested: true,
+      })
+    ).toEqual({ accumulator: 0, lastTime: 1100, steps: 1 });
   });
 });

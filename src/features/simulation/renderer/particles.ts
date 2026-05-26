@@ -6,6 +6,7 @@ import {
   projectPoint,
 } from "@/features/simulation/renderer/projection";
 import { baseTheme } from "@/theme/theme";
+import { rgba } from "@/theme/utils";
 
 export type ParticleDrawCommand = {
   collided: boolean;
@@ -54,9 +55,13 @@ function getDepthColor(particle: Particle, scale: number, showDepthShading: bool
 
   const alpha = Math.max(0.42, Math.min(1, 0.35 + scale * 0.75));
 
-  if (particle.charge === -1) return `rgba(90, 140, 255, ${alpha})`;
-  if (particle.charge === 1) return `rgba(255, 90, 80, ${alpha})`;
-  return `rgba(245, 245, 245, ${alpha})`;
+  if (particle.charge === -1) {
+    return rgba(baseTheme.color.particleDepthElectronRgb, alpha);
+  }
+  if (particle.charge === 1) {
+    return rgba(baseTheme.color.particleDepthProtonRgb, alpha);
+  }
+  return rgba(baseTheme.color.particleDepthNeutronRgb, alpha);
 }
 
 export function createParticleDrawGroups({
@@ -138,7 +143,7 @@ export function drawParticleGroups(
 
       ctx.beginPath();
       ctx.arc(px, py, radius + 4, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(255, 255, 0, 0.55)";
+      ctx.strokeStyle = baseTheme.color.particleCollisionRing;
       ctx.lineWidth = 1.5;
       ctx.stroke();
     }
@@ -156,8 +161,8 @@ export function drawParticleGroups(
     for (const { label, px, py, radius } of group) {
       if (!label) continue;
 
-      ctx.fillStyle = "rgba(255, 255, 255, 0.72)";
-      ctx.font = "11px monospace";
+      ctx.fillStyle = baseTheme.color.particleLabel;
+      ctx.font = baseTheme.typography.canvasLabelFont;
       ctx.fillText(label, px + radius + 4, py - radius - 2);
     }
   }
@@ -310,7 +315,7 @@ export function drawParticleTrails({
       }
     }
 
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.18)";
+    ctx.strokeStyle = baseTheme.color.particleTrail;
     ctx.stroke();
   }
 }

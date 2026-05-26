@@ -1,3 +1,5 @@
+import { simulationForceLabMessages } from "@/i18n/messages/forceLab";
+
 export const enMessages = {
   app: {
     title: "Canvas Particles",
@@ -36,5 +38,6 @@ export const enMessages = {
         neutrons: "Neutral",
       },
     },
+    forceLab: simulationForceLabMessages,
   },
 } as const;

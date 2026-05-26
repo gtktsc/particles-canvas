@@ -4,6 +4,8 @@ import type { Physics } from "@/features/simulation/model/Physics";
 import type { ViewMode } from "@/features/simulation/model/SimulationSettingsContext";
 import { Vector3 } from "@/features/simulation/model/Vector3";
 import { projectPoint, type Projection } from "@/features/simulation/renderer/projection";
+import { baseTheme } from "@/theme/theme";
+import { rgba } from "@/theme/utils";
 
 export type BoxEdge = {
   a: number;
@@ -179,7 +181,7 @@ export function drawWorldFrame({
       ctx.lineTo(point.x, point.y);
     }
     ctx.closePath();
-    ctx.fillStyle = "rgba(30, 120, 160, 0.045)";
+    ctx.fillStyle = baseTheme.color.worldFace;
     ctx.fill();
   }
 
@@ -191,7 +193,7 @@ export function drawWorldFrame({
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
     ctx.lineTo(b.x, b.y);
-    ctx.strokeStyle = `rgba(90, 240, 190, ${alpha})`;
+    ctx.strokeStyle = rgba(baseTheme.color.worldEdgeRgb, alpha);
     ctx.lineWidth = alpha > 0.55 ? 1.8 : 1;
     ctx.stroke();
   }
@@ -213,9 +215,9 @@ export function drawAxes({
   viewMode: ViewMode;
 }) {
   const axes = [
-    { color: "rgba(255, 90, 90, 0.9)", label: "X", vector: new Vector3(size, 0, 0) },
-    { color: "rgba(120, 255, 120, 0.9)", label: "Y", vector: new Vector3(0, size, 0) },
-    { color: "rgba(120, 170, 255, 0.9)", label: "Z", vector: new Vector3(0, 0, size) },
+    { color: baseTheme.color.worldAxisX, label: "X", vector: new Vector3(size, 0, 0) },
+    { color: baseTheme.color.worldAxisY, label: "Y", vector: new Vector3(0, size, 0) },
+    { color: baseTheme.color.worldAxisZ, label: "Z", vector: new Vector3(0, 0, size) },
   ];
   const origin = projectPoint({
     camera,
@@ -227,7 +229,7 @@ export function drawAxes({
   });
   if (!origin) return;
 
-  ctx.font = "12px monospace";
+  ctx.font = baseTheme.typography.canvasAxisFont;
   ctx.textBaseline = "middle";
 
   for (const axis of axes) {
@@ -286,7 +288,7 @@ export function drawGrid({
   viewMode: ViewMode;
 }) {
   ctx.beginPath();
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.09)";
+  ctx.strokeStyle = baseTheme.color.worldGrid;
   ctx.lineWidth = 1;
 
   for (const [start, end] of createGridLines(size, spacing, viewMode)) {
@@ -341,10 +343,10 @@ export function drawForceCenter({
 
   ctx.beginPath();
   ctx.arc(projected.x, projected.y, 6, 0, Math.PI * 2);
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+  ctx.strokeStyle = baseTheme.color.worldCenterStroke;
   ctx.lineWidth = 2;
   ctx.stroke();
-  ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+  ctx.fillStyle = baseTheme.color.worldCenterLabel;
   ctx.fillText("center", projected.x + 8, projected.y - 8);
 }
 
@@ -367,7 +369,7 @@ export function drawFieldVectors({
   testParticleType: ParticleType;
   viewMode: ViewMode;
 }) {
-  ctx.strokeStyle = "rgba(0, 220, 255, 0.45)";
+  ctx.strokeStyle = baseTheme.color.fieldVector;
   ctx.lineWidth = 1;
 
   for (let x = -size; x <= size; x += spacing) {
@@ -397,7 +399,7 @@ export function drawFieldVectors({
       if (!end) continue;
 
       drawScreenArrow({
-        color: "rgba(0, 220, 255, 0.45)",
+        color: baseTheme.color.fieldVector,
         ctx,
         end,
         start: projected,
@@ -444,8 +446,8 @@ export function drawPotentialHeatmap({
       const intensity = Math.min(0.38, Math.abs(potential) / 18_000);
       ctx.fillStyle =
         potential >= 0
-          ? `rgba(255, 120, 40, ${intensity})`
-          : `rgba(40, 150, 255, ${intensity})`;
+          ? rgba(baseTheme.color.potentialPositiveRgb, intensity)
+          : rgba(baseTheme.color.potentialNegativeRgb, intensity);
       ctx.fillRect(projected.x - 10, projected.y - 10, 20, 20);
     }
   }
@@ -490,16 +492,16 @@ export function drawProbe({
 
   ctx.beginPath();
   ctx.arc(projected.x, projected.y, 7, 0, Math.PI * 2);
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+  ctx.strokeStyle = baseTheme.color.probeStroke;
   ctx.lineWidth = 2;
   ctx.stroke();
-  ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+  ctx.fillStyle = baseTheme.color.probeLabel;
   ctx.fillText("probe", projected.x + 10, projected.y - 8);
 
   if (end) {
     ctx.lineWidth = 2;
     drawScreenArrow({
-      color: "rgba(255, 255, 255, 0.72)",
+      color: baseTheme.color.probeVector,
       ctx,
       end,
       start: projected,

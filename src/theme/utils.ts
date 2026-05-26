@@ -38,3 +38,7 @@ export function applyCssVariables(
     target.style.setProperty(key, String(value));
   }
 }
+
+export function rgba(rgbChannels: string, alpha: number) {
+  return `rgba(${rgbChannels}, ${alpha})`;
+}

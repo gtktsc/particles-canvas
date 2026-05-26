@@ -11,3 +11,8 @@ export type {
   VectorControl,
   VectorSettingKey,
 } from "@/features/simulation/model/controlConfig";
+export type {
+  ForceEnabledKey,
+  ForcePresetId,
+  ForceScalarSettingKey,
+} from "@/features/simulation/model/forceTypes";

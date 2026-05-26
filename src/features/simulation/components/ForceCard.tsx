@@ -1,13 +1,20 @@
+"use client";
+
 import { SliderControl } from "@/features/simulation/components/SliderControl";
-import type { ForceDefinition } from "@/features/simulation/model/forceDefinitions";
+import type {
+  ForceDefinition,
+  ForceEnabledKey,
+  ForceScalarSettingKey,
+} from "@/features/simulation/model/forceTypes";
 import type { SimulationSettings } from "@/features/simulation/model/SimulationSettingsContext";
+import { useMessages } from "@/i18n/MessagesProvider";
 import styles from "@/features/simulation/components/ControlPanel.module.css";
 
 type ForceCardProps = {
   force: ForceDefinition;
   onReset: (_force: ForceDefinition) => void;
-  onScalarChange: (_key: keyof SimulationSettings, _value: number) => void;
-  onToggle: (_key: keyof SimulationSettings, _enabled: boolean) => void;
+  onScalarChange: (_key: ForceScalarSettingKey, _value: number) => void;
+  onToggle: (_key: ForceEnabledKey, _enabled: boolean) => void;
   settings: SimulationSettings;
 };
 
@@ -18,6 +25,9 @@ export function ForceCard({
   onToggle,
   settings,
 }: ForceCardProps) {
+  const { messages } = useMessages();
+  const forceLab = messages.simulation.forceLab;
+  const forceCopy = forceLab.forces[force.id];
   const enabled = Boolean(settings[force.enabledKey]);
   const primarySliders = force.sliders.filter((slider) => !slider.advanced);
   const advancedSliders = force.sliders.filter((slider) => slider.advanced);
@@ -26,7 +36,7 @@ export function ForceCard({
       config={slider}
       disabled={!enabled}
       key={slider.key}
-      label={slider.label}
+      label={forceLab.sliderLabels[slider.key]}
       onChange={(value) => onScalarChange(slider.key, value)}
       value={Number(settings[slider.key])}
     />
@@ -41,25 +51,25 @@ export function ForceCard({
             onChange={(event) => onToggle(force.enabledKey, event.target.checked)}
             type="checkbox"
           />
-          <span>{force.title}</span>
+          <span>{forceCopy.title}</span>
         </label>
         <button
           className={styles.smallButton}
           onClick={() => onReset(force)}
           type="button"
         >
-          Reset
+          {forceLab.forceCard.reset}
         </button>
       </header>
 
-      <div className={styles.formula}>{force.formula}</div>
-      <p className={styles.description}>{force.description}</p>
+      <div className={styles.formula}>{forceCopy.formula}</div>
+      <p className={styles.description}>{forceCopy.description}</p>
 
       {primarySliders.map(renderSlider)}
 
       {advancedSliders.length > 0 ? (
         <details className={styles.advancedControls}>
-          <summary>Advanced</summary>
+          <summary>{forceLab.forceCard.advanced}</summary>
           {advancedSliders.map(renderSlider)}
         </details>
       ) : null}

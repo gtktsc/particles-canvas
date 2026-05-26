@@ -1,4 +1,7 @@
+"use client";
+
 import type { SimulationStats } from "@/features/simulation/model/simulationStats";
+import { useMessages } from "@/i18n/MessagesProvider";
 import styles from "@/features/simulation/components/ControlPanel.module.css";
 
 type StatsPanelProps = {
@@ -12,34 +15,37 @@ const formatNumber = (value: number) => {
 };
 
 export function StatsPanel({ stats }: StatsPanelProps) {
+  const { messages } = useMessages();
+  const labels = messages.simulation.forceLab.stats;
+
   return (
     <dl className={styles.stats}>
       <div>
-        <dt>Particles</dt>
+        <dt>{labels.particles}</dt>
         <dd>{stats.particleCount}</dd>
       </div>
       <div>
-        <dt>Forces</dt>
+        <dt>{labels.forces}</dt>
         <dd>{stats.activeForces}</dd>
       </div>
       <div>
-        <dt>FPS</dt>
+        <dt>{labels.fps}</dt>
         <dd>{stats.fps}</dd>
       </div>
       <div>
-        <dt>Avg speed</dt>
+        <dt>{labels.averageSpeed}</dt>
         <dd>{formatNumber(stats.averageSpeed)}</dd>
       </div>
       <div>
-        <dt>Kinetic</dt>
+        <dt>{labels.kinetic}</dt>
         <dd>{formatNumber(stats.kineticEnergy)}</dd>
       </div>
       <div>
-        <dt>Total E</dt>
+        <dt>{labels.totalEnergy}</dt>
         <dd>{formatNumber(stats.totalEnergy)}</dd>
       </div>
       <div>
-        <dt>Momentum</dt>
+        <dt>{labels.momentum}</dt>
         <dd>{formatNumber(stats.momentum)}</dd>
       </div>
     </dl>

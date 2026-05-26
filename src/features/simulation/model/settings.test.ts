@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { createDefaultSettings } from "@/features/simulation/model/SimulationSettingsContext";
 import { CONTROL_CONFIG } from "@/features/simulation/model/controlConfig";
-import {
-  FORCE_DEFINITIONS,
-  FORCE_PRESETS,
-} from "@/features/simulation/model/forceDefinitions";
+import { FORCE_DEFINITIONS } from "@/features/simulation/model/forceDefinitions";
+import { FORCE_PRESETS } from "@/features/simulation/model/forcePresets";
 import { createParticles } from "@/features/simulation/model/particles";
 
 describe("simulation settings", () => {
@@ -25,8 +23,8 @@ describe("simulation settings", () => {
       for (const slider of force.sliders) {
         const value = settings[slider.key];
 
-        expect(value, slider.label).toBeGreaterThanOrEqual(slider.min);
-        expect(value, slider.label).toBeLessThanOrEqual(slider.max);
+        expect(value, slider.key).toBeGreaterThanOrEqual(slider.min);
+        expect(value, slider.key).toBeLessThanOrEqual(slider.max);
       }
     }
   });

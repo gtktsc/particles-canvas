@@ -15,11 +15,5 @@ export function pushSimulationHistory(
   sample: SimulationHistorySample,
   maxSamples = MAX_HISTORY_SAMPLES
 ) {
-  history.push(sample);
-
-  while (history.length > maxSamples) {
-    history.shift();
-  }
-
-  return history;
+  return [...history, sample].slice(-maxSamples);
 }

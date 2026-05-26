@@ -1,5 +1,5 @@
 import { CanvasRefs } from "@/features/simulation/hooks/useSimulationRefs";
-import { getFixedStepCount } from "@/features/simulation/model/frameStep";
+import { getPhysicsFrameSteps } from "@/features/simulation/model/frameStep";
 import { DT_SECONDS } from "@/features/simulation/model/physicsConstants";
 import { pushSimulationHistory } from "@/features/simulation/model/simulationHistory";
 import {
@@ -7,6 +7,7 @@ import {
   type SimulationStats,
 } from "@/features/simulation/model/simulationStats";
 import { drawFps, calculateFps } from "@/features/simulation/renderer/fps";
+import { drawSimulationOverlays } from "@/features/simulation/renderer/overlays";
 import {
   createParticleDrawGroups,
   drawParticleTrails,
@@ -14,15 +15,7 @@ import {
   drawParticleGroups,
   sortParticlesByDepth,
 } from "@/features/simulation/renderer/particles";
-import {
-  drawAxes,
-  drawFieldVectors,
-  drawForceCenter,
-  drawGrid,
-  drawPotentialHeatmap,
-  drawProbe,
-  drawWorldFrame,
-} from "@/features/simulation/renderer/world";
+import { drawProbe } from "@/features/simulation/renderer/world";
 import { baseTheme } from "@/theme/theme";
 import { useCallback } from "react";
 
@@ -81,78 +74,7 @@ export function useAnimationLoop({
 
     refs.frameCount.current++;
 
-    world.updateSize(
-      settings.worldWidth,
-      settings.worldHeight,
-      settings.worldZ
-    );
-
-    const gridSize =
-      Math.max(settings.worldWidth, settings.worldHeight, settings.worldZ) / 2;
-
-    if (settings.showGrid) {
-      drawGrid({
-        camera: settings.cameraPosition,
-        ctx,
-        fov: settings.fov,
-        size: gridSize,
-        spacing: 50,
-        viewMode: settings.viewMode,
-      });
-    }
-
-    drawWorldFrame({
-      box: world.box,
-      camera: settings.cameraPosition,
-      ctx,
-      fov: settings.fov,
-      viewMode: settings.viewMode,
-    });
-
-    if (settings.showAxes) {
-      drawAxes({
-        camera: settings.cameraPosition,
-        center: settings.forceCenterPoint,
-        ctx,
-        fov: settings.fov,
-        size: Math.min(120, gridSize),
-        viewMode: settings.viewMode,
-      });
-    }
-
-    drawForceCenter({
-      camera: settings.cameraPosition,
-      center: settings.forceCenterPoint,
-      ctx,
-      fov: settings.fov,
-      viewMode: settings.viewMode,
-    });
-
-    if (settings.showFieldVectors) {
-      drawFieldVectors({
-        camera: settings.cameraPosition,
-        ctx,
-        fov: settings.fov,
-        physics,
-        size: Math.min(180, gridSize),
-        spacing: 60,
-        testParticleType: "proton",
-        viewMode: settings.viewMode,
-      });
-    }
-
-    if (settings.showPotentialHeatmap) {
-      drawPotentialHeatmap({
-        camera: settings.cameraPosition,
-        ctx,
-        fov: settings.fov,
-        physics,
-        size: Math.min(190, gridSize),
-        spacing: 34,
-        testParticleType: settings.probeParticleType,
-        viewMode: settings.viewMode,
-      });
-    }
+    drawSimulationOverlays({ ctx, physics, settings, world });
 
     const singleStepRequested =
       settings.stepSignal !== refs.lastStepSignal.current;
@@ -173,25 +95,18 @@ export function useAnimationLoop({
       });
     };
 
-    if (settings.isPaused) {
-      refs.lastPhysicsTime.current = now;
-      refs.physicsAccumulator.current = 0;
+    const physicsFrame = getPhysicsFrameSteps({
+      accumulator: refs.physicsAccumulator.current,
+      isPaused: settings.isPaused,
+      lastTime: refs.lastPhysicsTime.current,
+      now,
+      singleStepRequested,
+    });
+    refs.physicsAccumulator.current = physicsFrame.accumulator;
+    refs.lastPhysicsTime.current = physicsFrame.lastTime;
 
-      if (singleStepRequested) {
-        runPhysicsStep();
-      }
-    } else {
-      const fixedStep = getFixedStepCount({
-        accumulator: refs.physicsAccumulator.current,
-        lastTime: refs.lastPhysicsTime.current,
-        now,
-      });
-      refs.physicsAccumulator.current = fixedStep.accumulator;
-      refs.lastPhysicsTime.current = fixedStep.lastTime;
-
-      for (let i = 0; i < fixedStep.steps; i++) {
-        runPhysicsStep();
-      }
+    for (let i = 0; i < physicsFrame.steps; i++) {
+      runPhysicsStep();
     }
 
     if (
@@ -238,7 +153,7 @@ export function useAnimationLoop({
     if (settings.showVelocityVectors) {
       drawParticleVectors({
         cameraPosition: settings.cameraPosition,
-        color: "rgba(255, 255, 0, 0.75)",
+        color: baseTheme.color.velocityVector,
         ctx,
         fov: settings.fov,
         height,
@@ -253,7 +168,7 @@ export function useAnimationLoop({
     if (settings.showForceVectors) {
       drawParticleVectors({
         cameraPosition: settings.cameraPosition,
-        color: "rgba(0, 255, 255, 0.75)",
+        color: baseTheme.color.forceVector,
         ctx,
         fov: settings.fov,
         height,

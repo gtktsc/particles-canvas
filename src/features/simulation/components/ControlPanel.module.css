@@ -39,7 +39,7 @@
 .subtitle,
 .description {
   margin: 2px 0 0;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--color-control-panel-muted-text);
 }
 
 .toolbar {
@@ -108,8 +108,8 @@
 
 .activeButton,
 .activeExample {
-  border-color: rgba(255, 255, 255, 0.75);
-  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--color-control-panel-active-border);
+  background: var(--color-control-panel-active-background);
 }
 
 .examples {
@@ -133,12 +133,12 @@
 }
 
 .exampleButton span {
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--color-control-panel-muted-text);
   font-size: 12px;
 }
 
 .exampleButton em {
-  color: rgba(255, 255, 255, 0.58);
+  color: var(--color-control-panel-subtle-text);
   font-size: 11px;
   font-style: normal;
 }
@@ -158,7 +158,7 @@
 }
 
 .stats dt {
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--color-control-panel-secondary-text);
   font-size: 11px;
 }
 
@@ -182,7 +182,7 @@
 
 .groupTitle {
   margin: var(--spacing-xs) 0 0;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--color-control-panel-strong-text);
   font-size: 13px;
   letter-spacing: 0;
   text-transform: uppercase;
@@ -215,7 +215,7 @@
 }
 
 .exampleMeta dt {
-  color: rgba(255, 255, 255, 0.62);
+  color: var(--color-control-panel-dim-text);
   font-size: 11px;
 }
 
@@ -250,7 +250,7 @@
 
 .measurementGrid dt,
 .probeGrid dt {
-  color: rgba(255, 255, 255, 0.62);
+  color: var(--color-control-panel-dim-text);
   font-size: 11px;
 }
 
@@ -258,7 +258,7 @@
 .probeGrid dd {
   margin: 0;
   overflow-wrap: anywhere;
-  font-family: monospace;
+  font-family: var(--typography-control-panel-mono-font-family);
 }
 
 .selectGrid {
@@ -277,7 +277,7 @@
   min-width: 0;
   padding: 5px 6px;
   color: var(--color-control-panel-text);
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--color-control-panel-select-background);
   border: 1px solid var(--color-control-panel-border);
   border-radius: var(--radius-sm);
 }
@@ -300,8 +300,8 @@
 
 .formula {
   margin-top: var(--spacing-xs);
-  font-family: monospace;
-  color: rgba(255, 255, 255, 0.9);
+  font-family: var(--typography-control-panel-mono-font-family);
+  color: var(--color-control-panel-strong-text);
 }
 
 .description {

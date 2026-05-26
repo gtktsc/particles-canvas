@@ -35,6 +35,7 @@ import {
   createInitialSimulationStats,
   type SimulationStats,
 } from "@/features/simulation/model/simulationStats";
+import type { ForcePresetId } from "@/features/simulation/model/forceTypes";
 import type { ParticleType } from "@/features/simulation/model/Particle";
 
 export type ViewMode = "front" | "top" | "side" | "iso";
@@ -127,7 +128,7 @@ export type SimulationSettings = {
   showTrails: boolean;
   showVelocityVectors: boolean;
   trailLength: number;
-  activeExampleId: string;
+  activeExampleId: ForcePresetId;
   initialLayout: ExampleLayoutId;
   probeEnabled: boolean;
   probeParticleType: ParticleType;

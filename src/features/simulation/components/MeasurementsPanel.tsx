@@ -6,6 +6,8 @@ import type {
   SimulationHistorySample,
 } from "@/features/simulation/model/simulationHistory";
 import type { SimulationStats } from "@/features/simulation/model/simulationStats";
+import { baseTheme } from "@/theme/theme";
+import { useMessages } from "@/i18n/MessagesProvider";
 import styles from "@/features/simulation/components/ControlPanel.module.css";
 
 type MeasurementsPanelProps = {
@@ -14,10 +16,26 @@ type MeasurementsPanelProps = {
 };
 
 const SERIES = [
-  { color: "rgba(255, 220, 80, 0.9)", key: "totalEnergy", label: "E" },
-  { color: "rgba(120, 220, 255, 0.9)", key: "averageSpeed", label: "v" },
-  { color: "rgba(255, 120, 160, 0.9)", key: "momentum", label: "p" },
-  { color: "rgba(150, 255, 150, 0.9)", key: "angularMomentum", label: "L" },
+  {
+    color: baseTheme.color.graphTotalEnergy,
+    key: "totalEnergy",
+    labelKey: "totalEnergy",
+  },
+  {
+    color: baseTheme.color.graphAverageSpeed,
+    key: "averageSpeed",
+    labelKey: "averageSpeed",
+  },
+  {
+    color: baseTheme.color.graphMomentum,
+    key: "momentum",
+    labelKey: "momentum",
+  },
+  {
+    color: baseTheme.color.graphAngularMomentum,
+    key: "angularMomentum",
+    labelKey: "angularMomentum",
+  },
 ] as const;
 
 function formatNumber(value: number) {
@@ -31,6 +49,7 @@ function drawSeries(
   ctx: CanvasRenderingContext2D,
   history: SimulationHistorySample[],
   series: (typeof SERIES)[number],
+  label: string,
   top: number,
   height: number,
   width: number
@@ -55,11 +74,13 @@ function drawSeries(
 
   ctx.stroke();
   ctx.fillStyle = series.color;
-  ctx.fillText(series.label, 6, top + 12);
+  ctx.fillText(label, 6, top + 12);
 }
 
 export function MeasurementsPanel({ settings, stats }: MeasurementsPanelProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { messages } = useMessages();
+  const labels = messages.simulation.forceLab.measurements;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -68,28 +89,36 @@ export function MeasurementsPanel({ settings, stats }: MeasurementsPanelProps) {
 
     const { width, height } = canvas;
     ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = "rgba(255, 255, 255, 0.04)";
+    ctx.fillStyle = baseTheme.color.graphBackground;
     ctx.fillRect(0, 0, width, height);
-    ctx.font = "11px monospace";
+    ctx.font = baseTheme.typography.canvasLabelFont;
 
     const rowHeight = height / SERIES.length;
     for (let i = 0; i < SERIES.length; i++) {
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+      ctx.strokeStyle = baseTheme.color.graphGridLine;
       ctx.beginPath();
       ctx.moveTo(0, i * rowHeight + rowHeight / 2);
       ctx.lineTo(width, i * rowHeight + rowHeight / 2);
       ctx.stroke();
 
-      drawSeries(ctx, stats.history, SERIES[i], i * rowHeight, rowHeight, width);
+      drawSeries(
+        ctx,
+        stats.history,
+        SERIES[i],
+        labels.series[SERIES[i].labelKey],
+        i * rowHeight,
+        rowHeight,
+        width
+      );
     }
-  }, [stats.history]);
+  }, [labels.series, stats.history]);
 
   return (
-    <section className={styles.measurements} aria-label="Measurements">
-      <h2 className={styles.groupTitle}>Measurements</h2>
+    <section className={styles.measurements} aria-label={labels.ariaLabel}>
+      <h2 className={styles.groupTitle}>{labels.title}</h2>
       {settings.showGraphs ? (
         <canvas
-          aria-label="Live measurement graphs"
+          aria-label={labels.graphLabel}
           className={styles.graphCanvas}
           height={180}
           ref={canvasRef}
@@ -98,34 +127,34 @@ export function MeasurementsPanel({ settings, stats }: MeasurementsPanelProps) {
       ) : null}
       <dl className={styles.measurementGrid}>
         <div>
-          <dt>Potential</dt>
+          <dt>{labels.potential}</dt>
           <dd>{formatNumber(stats.potentialEnergy)}</dd>
         </div>
         <div>
-          <dt>Total E</dt>
+          <dt>{labels.totalEnergy}</dt>
           <dd>{formatNumber(stats.totalEnergy)}</dd>
         </div>
         <div>
-          <dt>Momentum</dt>
+          <dt>{labels.momentum}</dt>
           <dd>{formatNumber(stats.momentum)}</dd>
         </div>
         <div>
-          <dt>Angular L</dt>
+          <dt>{labels.angularMomentum}</dt>
           <dd>{formatNumber(stats.angularMomentum)}</dd>
         </div>
       </dl>
       {settings.probeEnabled ? (
         <dl className={styles.probeGrid}>
           <div>
-            <dt>Probe xyz</dt>
+            <dt>{labels.probePoint}</dt>
             <dd>{settings.probePoint.toString()}</dd>
           </div>
           <div>
-            <dt>Probe a</dt>
+            <dt>{labels.probeAcceleration}</dt>
             <dd>{stats.probeAcceleration.toString()}</dd>
           </div>
           <div>
-            <dt>Probe U</dt>
+            <dt>{labels.probePotential}</dt>
             <dd>{formatNumber(stats.probePotential)}</dd>
           </div>
         </dl>

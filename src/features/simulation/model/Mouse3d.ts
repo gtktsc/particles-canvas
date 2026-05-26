@@ -165,8 +165,8 @@ export class Mouse3D {
         }
         ctx.closePath();
         ctx.fillStyle = this.draggedParticles.length > 0
-          ? "rgba(0, 255, 120, 0.08)"
-          : "rgba(0, 255, 120, 0.035)";
+          ? baseTheme.color.dragSelectionActive
+          : baseTheme.color.dragSelectionIdle;
         ctx.fill();
       }
 
